@@ -100,23 +100,22 @@ body.light .flash-card::before{
   display:inline-flex;align-items:center;gap:6px;
   margin-top:8px;
   padding:7px 14px;
-  background:rgba(0,212,255,0.1);
-  border:1px solid var(--accent);
+  background:transparent;
+  border:1px solid var(--border2);
   border-radius:20px;
-  color:var(--accent);
+  color:var(--muted);
   font-family:'DM Mono',monospace;
   font-size:11px;letter-spacing:0.09em;
   text-transform:uppercase;
   cursor:pointer;
   transition:all .15s;
   width:fit-content;
-  box-shadow:0 0 12px rgba(0,212,255,0.15);
 }
 .opt-data-btn:hover{
-  background:rgba(0,212,255,0.18);
-  box-shadow:0 0 20px rgba(0,212,255,0.3);
+  border-color:var(--text);
+  color:var(--text);
 }
-.opt-data-btn svg{opacity:0.85}
+.opt-data-btn svg{opacity:0.5}
 
 /* Name modal */
 .name-modal-overlay{
@@ -215,10 +214,11 @@ body.light .flash-card::before{
   align-self:flex-start;
   transition:all .15s;
   user-select:none;
+  box-shadow:0 0 10px rgba(0,0,0,0.2);
 }
 .theme-toggle:hover{
   border-color:var(--accent);
-  box-shadow:0 0 12px var(--glow);
+  box-shadow:0 0 16px var(--glow);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -290,15 +290,16 @@ body::after{
   font-family:'DM Mono',monospace;
   font-size:10px;letter-spacing:0.12em;
   text-transform:uppercase;
-  color:var(--muted);
+  color:var(--text);
+  opacity:0.55;
   margin-top:3px;
 }
 .version-tag{
   font-family:'DM Mono',monospace;
   font-size:9px;letter-spacing:0.14em;
   text-transform:uppercase;
-  color:var(--muted);
-  opacity:1;
+  color:var(--text);
+  opacity:0.45;
   margin-top:5px;
 }
 
@@ -309,13 +310,13 @@ body::after{
   border:1px solid var(--border2);
   border-radius:40px;
   padding:4px;gap:2px;
-  box-shadow:0 0 16px rgba(0,212,255,0.06);
+  box-shadow:0 0 20px rgba(0,212,255,0.1),0 0 0 1px rgba(0,212,255,0.04);
 }
 .mode-btn{
   padding:7px 18px;
   border:none;border-radius:36px;
   background:transparent;
-  color:var(--muted);
+  color:var(--text);
   font-family:'DM Mono',monospace;
   font-size:12px;letter-spacing:0.06em;
   cursor:pointer;transition:all .2s;
@@ -325,7 +326,7 @@ body::after{
   background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
   color:#050810;
   font-weight:500;
-  box-shadow:0 0 12px rgba(0,212,255,0.35);
+  box-shadow:0 0 16px rgba(0,212,255,0.45);
 }
 
 /* Direction toggle */
@@ -336,7 +337,7 @@ body::after{
   flex:1;padding:6px 10px;
   border:none;border-radius:36px;
   background:transparent;
-  color:var(--muted);
+  color:var(--text);
   font-family:'DM Mono',monospace;
   font-size:10px;letter-spacing:0.05em;
   cursor:pointer;transition:all .2s;
@@ -353,10 +354,10 @@ body::after{
 .lesson-row{display:flex;gap:7px;margin-bottom:1.75rem;flex-wrap:wrap}
 .lesson-pill{
   padding:6px 13px;
-  border:1px solid var(--border);
+  border:1px solid var(--border2);
   border-radius:30px;
   background:var(--surface);
-  color:var(--muted);
+  color:var(--text);
   font-family:'DM Mono',monospace;
   font-size:11px;letter-spacing:0.06em;
   cursor:pointer;transition:all .15s;
@@ -382,7 +383,7 @@ body::after{
 .stat-label{
   font-family:'DM Mono',monospace;
   font-size:10px;letter-spacing:0.12em;
-  text-transform:uppercase;color:var(--muted);margin-bottom:4px;
+  text-transform:uppercase;color:var(--text);opacity:0.6;margin-bottom:4px;
 }
 .stat-val{
   font-size:22px;font-weight:300;
@@ -739,18 +740,19 @@ body::after{
   border:1px solid var(--border2);
   border-radius:30px;
   background:var(--surface);
-  color:var(--muted);
+  color:var(--text);
   font-family:'DM Mono',monospace;
   font-size:11px;letter-spacing:0.08em;
   text-transform:uppercase;
   cursor:pointer;transition:all .15s;
   flex-shrink:0;
   align-self:flex-start;
+  box-shadow:0 0 10px rgba(0,0,0,0.2);
 }
 .glossary-btn:hover{
   border-color:var(--accent);
   color:var(--accent);
-  box-shadow:0 0 14px var(--glow);
+  box-shadow:0 0 16px var(--glow);
 }
 
 /* Glossary overlay */
@@ -918,7 +920,7 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v2.0</span>
+      <span class="version-tag">v2.1</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <button class="opt-data-btn" onclick="openNameModal()" style="display:none">
@@ -982,8 +984,8 @@ kbd{
   <div class="dir-row" id="dir-row">
     <span class="dir-label">Mode</span>
     <div class="dir-toggle">
-      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Word → Def</button>
-      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Def → Word</button>
+      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Word → Definition</button>
+      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Definition → Word</button>
       <button class="dir-btn" id="dir-random" onclick="setDir('random')">Random</button>
     </div>
   </div>
