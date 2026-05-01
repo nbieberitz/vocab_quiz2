@@ -1398,6 +1398,7 @@ let fbUser = null;
 let secondTimer = null;
 let localUserSeconds = 0;
 let localGlobalSeconds = 0;
+let secondsSinceFlush = 0;
 
 function fmtHMS(s) {
   const h = Math.floor(s / 3600);
@@ -1459,10 +1460,15 @@ function parseHMS(str) {
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
+  secondsSinceFlush = 0;
   secondTimer = setInterval(() => {
     localUserSeconds++;
     localGlobalSeconds++;
-    if (localUserSeconds % 60 === 0) flushTime();
+    secondsSinceFlush++;
+    if (secondsSinceFlush >= 60) {
+      flushTime();
+      secondsSinceFlush = 0;
+    }
   }, 1000);
 }
 
