@@ -1399,11 +1399,10 @@ let secondTimer = null;
 let localUserSeconds = 0;
 let localGlobalSeconds = 0;
 
-function fmtHMS(s) {
+function fmtHM(s) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
 auth.signInAnonymously().then(async result => {
@@ -1422,7 +1421,7 @@ auth.signInAnonymously().then(async result => {
       const userNumber = count + 1;
       t.set(statsRef, {
         totalUsers: userNumber,
-        totalTime: "00:00:00",
+        totalTime: "00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0
       }, { merge: true });
@@ -1430,41 +1429,43 @@ auth.signInAnonymously().then(async result => {
         userNumber,
         firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        totalTime: "00:00:00",
+        totalTime: "00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
         sessionCount: 1
       });
     });
     localUserSeconds = 0;
-    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    localGlobalSeconds = statsSnap.exists ? parseHM(statsSnap.data().totalTime) : 0;
   } else {
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1)
     });
-    localUserSeconds = parseHMS(snap.data().totalTime);
-    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    localUserSeconds = parseHM(snap.data().totalTime);
+    localGlobalSeconds = statsSnap.exists ? parseHM(statsSnap.data().totalTime) : 0;
   }
   startSecondTimer();
 }).catch(err => console.warn("Firebase auth error:", err));
 
-// Parses "HH:MM:SS" back to total seconds for local tracking.
-function parseHMS(str) {
+// Parses "HH:MM" back to total seconds for local tracking.
+function parseHM(str) {
   if (!str || typeof str !== "string") return 0;
-  const [h,m,s] = str.split(":").map(Number);
-  return (h||0)*3600 + (m||0)*60 + (s||0);
+  const [h,m] = str.split(":").map(Number);
+  return (h||0)*3600 + (m||0)*60;
 }
 
-// Ticks every second, writes HH:MM:SS string directly to Firestore.
+// Ticks every second locally. Writes HH:MM to Firestore once per minute.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
   secondTimer = setInterval(() => {
     if (!fbUser) return;
     localUserSeconds++;
     localGlobalSeconds++;
-    db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHMS(localUserSeconds) });
-    db.collection("stats").doc("global").update({ totalTime: fmtHMS(localGlobalSeconds) });
+    if (localUserSeconds % 60 === 0) {
+      db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHM(localUserSeconds) });
+      db.collection("stats").doc("global").update({ totalTime: fmtHM(localGlobalSeconds) });
+    }
   }, 1000);
 }
 
