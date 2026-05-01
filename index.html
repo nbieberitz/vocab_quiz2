@@ -1396,24 +1396,33 @@ const db = firebase.firestore();
 
 let fbUser = null;
 let secondTimer = null;
+let localUserSeconds = 0;
+let localGlobalSeconds = 0;
 
+function fmtHMS(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+}
 
 auth.signInAnonymously().then(async result => {
   fbUser = result.user;
   const uid = fbUser.uid;
-  const userRef = db.collection('users').doc(uid);
-  const statsRef = db.collection('stats').doc('global');
+  const userRef = db.collection("users").doc(uid);
+  const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
+  const statsSnap = await statsRef.get();
 
   if (!snap.exists) {
     // New user — assign a number atomically
     await db.runTransaction(async t => {
-      const statsSnap = await t.get(statsRef);
-      const count = statsSnap.exists ? (statsSnap.data().totalUsers || 0) : 0;
+      const ss = await t.get(statsRef);
+      const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
       const userNumber = count + 1;
       t.set(statsRef, {
         totalUsers: userNumber,
-        totalTime: 0,
+        totalTime: "00:00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0
       }, { merge: true });
@@ -1421,57 +1430,66 @@ auth.signInAnonymously().then(async result => {
         userNumber,
         firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        totalTime: 0,
+        totalTime: "00:00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
         sessionCount: 1
       });
     });
+    localUserSeconds = 0;
+    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
   } else {
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1)
     });
+    localUserSeconds = parseHMS(snap.data().totalTime);
+    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
   }
   startSecondTimer();
-}).catch(err => console.warn('Firebase auth error:', err));
+}).catch(err => console.warn("Firebase auth error:", err));
 
-// Ticks every second and writes directly to Firestore each tick.
+// Parses "HH:MM:SS" back to total seconds for local tracking.
+function parseHMS(str) {
+  if (!str || typeof str !== "string") return 0;
+  const [h,m,s] = str.split(":").map(Number);
+  return (h||0)*3600 + (m||0)*60 + (s||0);
+}
+
+// Ticks every second, writes HH:MM:SS string directly to Firestore.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
   secondTimer = setInterval(() => {
     if (!fbUser) return;
-    const inc = firebase.firestore.FieldValue.increment(1);
-    db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
-    db.collection('stats').doc('global').update({ totalTime: inc });
+    localUserSeconds++;
+    localGlobalSeconds++;
+    db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHMS(localUserSeconds) });
+    db.collection("stats").doc("global").update({ totalTime: fmtHMS(localGlobalSeconds) });
   }, 1000);
 }
 
 function trackAnswer(isRight) {
   if (!fbUser) return;
   const inc1 = firebase.firestore.FieldValue.increment(1);
-  db.collection('users').doc(fbUser.uid).update({
+  db.collection("users").doc(fbUser.uid).update({
     totalQuestionsAnswered: inc1,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
   });
-  db.collection('stats').doc('global').update({
+  db.collection("stats").doc("global").update({
     totalQuestionsAnswered: inc1,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
   });
 }
 
-// totalTime stored as total seconds. To display as HH:MM:SS:
-// const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
-// `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
     clearInterval(secondTimer);
     secondTimer = null;
   } else {
     startSecondTimer();
   }
 });
-window.addEventListener('beforeunload', () => clearInterval(secondTimer));
+window.addEventListener("beforeunload", () => clearInterval(secondTimer));
 // ─────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
