@@ -1455,18 +1455,19 @@ function parseHM(str) {
   return (h||0)*3600 + (m||0)*60;
 }
 
-// Ticks every second locally. Writes HH:MM to Firestore once per minute.
+// Ticks every second locally. Firestore is only written on tab hide or close.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
   secondTimer = setInterval(() => {
-    if (!fbUser) return;
     localUserSeconds++;
     localGlobalSeconds++;
-    if (localUserSeconds % 60 === 0) {
-      db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHM(localUserSeconds) });
-      db.collection("stats").doc("global").update({ totalTime: fmtHM(localGlobalSeconds) });
-    }
   }, 1000);
+}
+
+function flushTime() {
+  if (!fbUser) return;
+  db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHM(localUserSeconds) });
+  db.collection("stats").doc("global").update({ totalTime: fmtHM(localGlobalSeconds) });
 }
 
 function trackAnswer(isRight) {
@@ -1486,11 +1487,15 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     clearInterval(secondTimer);
     secondTimer = null;
+    flushTime();
   } else {
     startSecondTimer();
   }
 });
-window.addEventListener("beforeunload", () => clearInterval(secondTimer));
+window.addEventListener("beforeunload", () => {
+  clearInterval(secondTimer);
+  flushTime();
+});
 // ─────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
