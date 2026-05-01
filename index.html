@@ -97,27 +97,26 @@ body.light .flash-card::before{
 
 /* Optional data button */
 .opt-data-btn{
-  display:inline-flex;align-items:center;gap:5px;
-  margin-top:7px;
-  padding:4px 10px;
-  background:transparent;
-  border:1px solid var(--border2);
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:8px;
+  padding:7px 14px;
+  background:rgba(0,212,255,0.1);
+  border:1px solid var(--accent);
   border-radius:20px;
-  color:var(--muted);
+  color:var(--accent);
   font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.09em;
+  font-size:11px;letter-spacing:0.09em;
   text-transform:uppercase;
   cursor:pointer;
   transition:all .15s;
   width:fit-content;
+  box-shadow:0 0 12px rgba(0,212,255,0.15);
 }
 .opt-data-btn:hover{
-  border-color:var(--accent);
-  color:var(--accent);
-  box-shadow:0 0 10px var(--glow);
+  background:rgba(0,212,255,0.18);
+  box-shadow:0 0 20px rgba(0,212,255,0.3);
 }
-.opt-data-btn svg{opacity:0.6}
-.opt-data-btn:hover svg{opacity:1}
+.opt-data-btn svg{opacity:0.85}
 
 /* Name modal */
 .name-modal-overlay{
@@ -920,6 +919,8 @@ kbd{
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
       <span class="version-tag">v2.0</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <button class="opt-data-btn" onclick="openNameModal()">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
@@ -927,8 +928,7 @@ kbd{
         </svg>
         Send optional data
       </button>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
       <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
@@ -944,6 +944,7 @@ kbd{
       <div class="theme-toggle" onclick="setTheme(document.body.classList.contains('light')?'dark':'light')" title="Toggle theme" style="cursor:pointer">
         <span id="theme-icon">🌙</span>
       </div>
+      </div>
     </div>
   </div>
 
@@ -951,7 +952,7 @@ kbd{
   <div class="name-modal-overlay" id="name-modal-overlay" onclick="handleNameOverlayClick(event)">
     <div class="name-modal">
       <div class="name-modal-title">OPTIONAL <em>DATA</em></div>
-      <p class="name-modal-desc">Enter your name to have it displayed in the data center instead of your anonymous user ID. This is completely optional.</p>
+      <p class="name-modal-desc">This allows minor optional data to be sent to the developer to help improve the website if needed.</p>
       <input class="name-modal-input" id="name-modal-input" type="text" placeholder="Your name" maxlength="60" oninput="onNameInput()">
       <div id="name-modal-thanks" class="name-modal-thanks" style="display:none">✓ Thanks! Your name has been saved.</div>
       <div class="name-modal-actions" id="name-modal-actions">
@@ -1551,6 +1552,7 @@ function submitName() {
       document.getElementById('name-modal-input').style.display = 'none';
       document.getElementById('name-modal-actions').style.display = 'none';
       document.getElementById('name-modal-thanks').style.display = 'block';
+      document.querySelector('.opt-data-btn').style.display = 'none';
       setTimeout(() => closeNameModal(), 1800);
     })
     .catch(() => {
@@ -1626,6 +1628,9 @@ auth.signInAnonymously().then(async result => {
     });
     localUserSeconds = parseHMS(snap.data().totalTime);
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    if (snap.data().displayName) {
+      document.querySelector('.opt-data-btn').style.display = 'none';
+    }
   }
   startSecondTimer();
 }).catch(err => console.warn("Firebase auth error:", err));
