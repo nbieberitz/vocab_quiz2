@@ -1456,12 +1456,13 @@ function parseHMS(str) {
   return (h||0)*3600 + (m||0)*60 + (s||0);
 }
 
-// Ticks every second locally. Firestore is only written on tab hide or close.
+// Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
   secondTimer = setInterval(() => {
     localUserSeconds++;
     localGlobalSeconds++;
+    if (localUserSeconds % 60 === 0) flushTime();
   }, 1000);
 }
 
