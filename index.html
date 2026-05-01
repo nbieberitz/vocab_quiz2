@@ -95,6 +95,115 @@ body.light .flash-card::before{
   background:linear-gradient(90deg,transparent,rgba(0,119,204,0.12),transparent);
 }
 
+/* Optional data button */
+.opt-data-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:7px;
+  padding:4px 10px;
+  background:transparent;
+  border:1px solid var(--border2);
+  border-radius:20px;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.09em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+  width:fit-content;
+}
+.opt-data-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  box-shadow:0 0 10px var(--glow);
+}
+.opt-data-btn svg{opacity:0.6}
+.opt-data-btn:hover svg{opacity:1}
+
+/* Name modal */
+.name-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(6px);
+  z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s;
+}
+.name-modal-overlay.open{opacity:1;pointer-events:all;}
+.name-modal{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:2rem 2rem 1.5rem;
+  width:min(420px,90vw);
+  box-shadow:0 8px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(0,200,255,0.06);
+  display:flex;flex-direction:column;gap:1.1rem;
+  transform:translateY(10px);
+  transition:transform .2s;
+}
+.name-modal-overlay.open .name-modal{transform:translateY(0);}
+.name-modal-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.7rem;letter-spacing:0.07em;
+  color:var(--text);
+  line-height:1;
+}
+.name-modal-title em{font-style:normal;color:var(--accent);}
+.name-modal-desc{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.06em;
+  color:var(--muted);
+  line-height:1.7;
+}
+.name-modal-input{
+  width:100%;
+  padding:10px 14px;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.name-modal-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,212,255,0.1);
+}
+.name-modal-input::placeholder{color:var(--muted);opacity:0.6;}
+.name-modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.name-modal-cancel{
+  padding:8px 18px;
+  background:transparent;
+  border:1px solid var(--border2);
+  border-radius:8px;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.06em;
+  cursor:pointer;transition:all .15s;
+}
+.name-modal-cancel:hover{border-color:var(--text);color:var(--text);}
+.name-modal-submit{
+  padding:8px 20px;
+  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
+  border:none;border-radius:8px;
+  color:#050810;
+  font-family:'DM Mono',monospace;
+  font-size:12px;font-weight:500;letter-spacing:0.06em;
+  cursor:pointer;transition:all .15s;
+  box-shadow:0 0 12px rgba(0,212,255,0.25);
+}
+.name-modal-submit:hover{box-shadow:0 0 20px rgba(0,212,255,0.4);}
+.name-modal-submit:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}
+.name-modal-thanks{
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.07em;
+  color:var(--correct);
+  text-align:center;
+  padding:4px 0 2px;
+}
+
 /* Theme toggle button */
 .theme-toggle{
   display:flex;align-items:center;justify-content:center;
@@ -811,6 +920,13 @@ kbd{
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
       <span class="version-tag">v2.0</span>
+      <button class="opt-data-btn" onclick="openNameModal()">
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M1.5 10.5c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Send optional data
+      </button>
     </div>
     <div style="display:flex;align-items:flex-start;gap:8px">
       <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
@@ -827,6 +943,20 @@ kbd{
       </div>
       <div class="theme-toggle" onclick="setTheme(document.body.classList.contains('light')?'dark':'light')" title="Toggle theme" style="cursor:pointer">
         <span id="theme-icon">🌙</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name modal -->
+  <div class="name-modal-overlay" id="name-modal-overlay" onclick="handleNameOverlayClick(event)">
+    <div class="name-modal">
+      <div class="name-modal-title">OPTIONAL <em>DATA</em></div>
+      <p class="name-modal-desc">Enter your name to have it displayed in the data center instead of your anonymous user ID. This is completely optional.</p>
+      <input class="name-modal-input" id="name-modal-input" type="text" placeholder="Your name" maxlength="60" oninput="onNameInput()">
+      <div id="name-modal-thanks" class="name-modal-thanks" style="display:none">✓ Thanks! Your name has been saved.</div>
+      <div class="name-modal-actions" id="name-modal-actions">
+        <button class="name-modal-cancel" onclick="closeNameModal()">Cancel</button>
+        <button class="name-modal-submit" id="name-modal-submit" onclick="submitName()" disabled>Submit</button>
       </div>
     </div>
   </div>
@@ -1379,6 +1509,56 @@ document.addEventListener('keydown', e => {
     if(e.key === 'ArrowRight') flashNav(1);
   }
 });
+
+// ─── Optional Name Modal ──────────────────────────────────────────────────────
+function openNameModal() {
+  const overlay = document.getElementById('name-modal-overlay');
+  const input = document.getElementById('name-modal-input');
+  const thanks = document.getElementById('name-modal-thanks');
+  const actions = document.getElementById('name-modal-actions');
+  const submit = document.getElementById('name-modal-submit');
+  // Reset state
+  input.value = '';
+  input.style.display = '';
+  thanks.style.display = 'none';
+  actions.style.display = 'flex';
+  submit.disabled = true;
+  overlay.classList.add('open');
+  setTimeout(() => input.focus(), 150);
+}
+
+function closeNameModal() {
+  document.getElementById('name-modal-overlay').classList.remove('open');
+}
+
+function handleNameOverlayClick(e) {
+  if (e.target === document.getElementById('name-modal-overlay')) closeNameModal();
+}
+
+function onNameInput() {
+  const val = document.getElementById('name-modal-input').value.trim();
+  document.getElementById('name-modal-submit').disabled = val.length === 0;
+}
+
+function submitName() {
+  const name = document.getElementById('name-modal-input').value.trim();
+  if (!name || !fbUser) return;
+  const submit = document.getElementById('name-modal-submit');
+  submit.disabled = true;
+  submit.textContent = 'Saving…';
+  db.collection("users").doc(fbUser.uid).update({ displayName: name })
+    .then(() => {
+      document.getElementById('name-modal-input').style.display = 'none';
+      document.getElementById('name-modal-actions').style.display = 'none';
+      document.getElementById('name-modal-thanks').style.display = 'block';
+      setTimeout(() => closeNameModal(), 1800);
+    })
+    .catch(() => {
+      submit.disabled = false;
+      submit.textContent = 'Submit';
+    });
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Firebase Tracking ───────────────────────────────────────────────────────
 const firebaseConfig = {
