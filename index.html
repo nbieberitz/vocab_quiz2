@@ -1394,7 +1394,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let fbUser = null;
-let minuteTimer = null;
+let secondTimer = null;
+let pendingSeconds = 0; // local accumulator — written to Firestore every 60s
 
 auth.signInAnonymously().then(async result => {
   fbUser = result.user;
@@ -1431,18 +1432,28 @@ auth.signInAnonymously().then(async result => {
       sessionCount: firebase.firestore.FieldValue.increment(1)
     });
   }
-  startMinuteTimer();
+  startSecondTimer();
 }).catch(err => console.warn('Firebase auth error:', err));
 
-// Increments totalTime by 1 (minute) every 60 seconds while tab is visible
-function startMinuteTimer() {
-  if (minuteTimer) clearInterval(minuteTimer);
-  minuteTimer = setInterval(() => {
+// Ticks every second locally. Flushes accumulated seconds to Firestore every 60s.
+function startSecondTimer() {
+  if (secondTimer) clearInterval(secondTimer);
+  secondTimer = setInterval(() => {
     if (!fbUser) return;
-    const inc = firebase.firestore.FieldValue.increment(1);
-    db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
-    db.collection('stats').doc('global').update({ totalTime: inc });
-  }, 60000);
+    pendingSeconds++;
+    if (pendingSeconds >= 60) {
+      flushTime(pendingSeconds);
+      pendingSeconds = 0;
+    }
+  }, 1000);
+}
+
+// Writes accumulated seconds to Firestore and resets the local counter.
+function flushTime(seconds) {
+  if (!fbUser || seconds <= 0) return;
+  const inc = firebase.firestore.FieldValue.increment(seconds);
+  db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
+  db.collection('stats').doc('global').update({ totalTime: inc });
 }
 
 function trackAnswer(isRight) {
@@ -1458,16 +1469,21 @@ function trackAnswer(isRight) {
   });
 }
 
-// totalTime is stored as total minutes. To display: Math.floor(t/60) + " Hours, " + (t%60) + " Minutes"
+// totalTime is stored as total seconds. To display: Math.floor(t/3600) + " Hours, " + Math.floor((t%3600)/60) + " Minutes"
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    clearInterval(minuteTimer);
-    minuteTimer = null;
+    clearInterval(secondTimer);
+    secondTimer = null;
+    flushTime(pendingSeconds); // save whatever's accumulated so far
+    pendingSeconds = 0;
   } else {
-    startMinuteTimer();
+    startSecondTimer();
   }
 });
-window.addEventListener('beforeunload', () => clearInterval(minuteTimer));
+window.addEventListener('beforeunload', () => {
+  clearInterval(secondTimer);
+  flushTime(pendingSeconds); // best-effort flush on page close
+});
 // ─────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
