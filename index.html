@@ -921,7 +921,7 @@ kbd{
       <span class="version-tag">v2.0</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <button class="opt-data-btn" onclick="openNameModal()">
+      <button class="opt-data-btn" onclick="openNameModal()" style="display:none">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
           <path d="M1.5 10.5c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
@@ -1621,6 +1621,7 @@ auth.signInAnonymously().then(async result => {
     });
     localUserSeconds = 0;
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    document.querySelector('.opt-data-btn').style.display = '';  // new user, no name yet
   } else {
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1628,8 +1629,8 @@ auth.signInAnonymously().then(async result => {
     });
     localUserSeconds = parseHMS(snap.data().totalTime);
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
-    if (snap.data().displayName) {
-      document.querySelector('.opt-data-btn').style.display = 'none';
+    if (!snap.data().displayName) {
+      document.querySelector('.opt-data-btn').style.display = '';
     }
   }
   startSecondTimer();
