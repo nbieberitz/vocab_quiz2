@@ -1396,7 +1396,7 @@ const db = firebase.firestore();
 
 let fbUser = null;
 let secondTimer = null;
-let pendingSeconds = 0; // local accumulator — written to Firestore every 60s
+
 
 auth.signInAnonymously().then(async result => {
   fbUser = result.user;
@@ -1436,25 +1436,15 @@ auth.signInAnonymously().then(async result => {
   startSecondTimer();
 }).catch(err => console.warn('Firebase auth error:', err));
 
-// Ticks every second locally. Flushes accumulated seconds to Firestore every 60s.
+// Ticks every second and writes directly to Firestore each tick.
 function startSecondTimer() {
   if (secondTimer) clearInterval(secondTimer);
   secondTimer = setInterval(() => {
     if (!fbUser) return;
-    pendingSeconds++;
-    if (pendingSeconds >= 60) {
-      flushTime(pendingSeconds);
-      pendingSeconds = 0;
-    }
+    const inc = firebase.firestore.FieldValue.increment(1);
+    db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
+    db.collection('stats').doc('global').update({ totalTime: inc });
   }, 1000);
-}
-
-// Writes accumulated seconds to Firestore and resets the local counter.
-function flushTime(seconds) {
-  if (!fbUser || seconds <= 0) return;
-  const inc = firebase.firestore.FieldValue.increment(seconds);
-  db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
-  db.collection('stats').doc('global').update({ totalTime: inc });
 }
 
 function trackAnswer(isRight) {
@@ -1470,21 +1460,18 @@ function trackAnswer(isRight) {
   });
 }
 
-// totalTime is stored as total seconds. To display: Math.floor(t/3600) + " Hours, " + Math.floor((t%3600)/60) + " Minutes"
+// totalTime stored as total seconds. To display as HH:MM:SS:
+// const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
+// `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     clearInterval(secondTimer);
     secondTimer = null;
-    flushTime(pendingSeconds); // save whatever's accumulated so far
-    pendingSeconds = 0;
   } else {
     startSecondTimer();
   }
 });
-window.addEventListener('beforeunload', () => {
-  clearInterval(secondTimer);
-  flushTime(pendingSeconds); // best-effort flush on page close
-});
+window.addEventListener('beforeunload', () => clearInterval(secondTimer));
 // ─────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
