@@ -1396,9 +1396,9 @@ const db = firebase.firestore();
 
 let fbUser = null;
 let secondTimer = null;
+let flushTimer = null;
 let localUserSeconds = 0;
 let localGlobalSeconds = 0;
-let secondsSinceFlush = 0;
 
 function fmtHMS(s) {
   const h = Math.floor(s / 3600);
@@ -1459,17 +1459,21 @@ function parseHMS(str) {
 
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
 function startSecondTimer() {
-  if (secondTimer) clearInterval(secondTimer);
-  secondsSinceFlush = 0;
+  stopTimers();
   secondTimer = setInterval(() => {
     localUserSeconds++;
     localGlobalSeconds++;
-    secondsSinceFlush++;
-    if (secondsSinceFlush >= 60) {
-      flushTime();
-      secondsSinceFlush = 0;
-    }
   }, 1000);
+  flushTimer = setInterval(() => {
+    flushTime();
+  }, 60000);
+}
+
+function stopTimers() {
+  clearInterval(secondTimer);
+  clearInterval(flushTimer);
+  secondTimer = null;
+  flushTimer = null;
 }
 
 function flushTime() {
@@ -1493,15 +1497,14 @@ function trackAnswer(isRight) {
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
-    clearInterval(secondTimer);
-    secondTimer = null;
+    stopTimers();
     flushTime();
   } else {
     startSecondTimer();
   }
 });
 window.addEventListener("beforeunload", () => {
-  clearInterval(secondTimer);
+  stopTimers();
   flushTime();
 });
 // ─────────────────────────────────────────────────────────────────────────────
