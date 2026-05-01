@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocab Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#05080f;
+  --surface:#0b1120;
+  --surface2:#111a2e;
+  --border:rgba(0,200,255,0.08);
+  --border2:rgba(0,200,255,0.22);
+  --text:#e8eef8;
+  --muted:#4a5a78;
+  --accent:#00d4ff;
+  --accent2:#f5a623;
+  --correct:#00e5a0;
+  --wrong:#ff5c7a;
+  --correct-bg:rgba(0,229,160,0.08);
+  --wrong-bg:rgba(255,92,122,0.08);
+  --correct-border:rgba(0,229,160,0.3);
+  --wrong-border:rgba(255,92,122,0.3);
+  --glow:rgba(0,212,255,0.15);
+  --glow2:rgba(245,166,35,0.12);
+}
+/* Light mode overrides */
+body.light{
+  --bg:#f0f4fa;
+  --surface:#ffffff;
+  --surface2:#e4eaf5;
+  --border:rgba(0,120,200,0.1);
+  --border2:rgba(0,120,200,0.25);
+  --text:#0f1a2e;
+  --muted:#7a90b0;
+  --accent:#0077cc;
+  --accent2:#d4870a;
+  --correct:#00a872;
+  --wrong:#d93a57;
+  --correct-bg:rgba(0,168,114,0.09);
+  --wrong-bg:rgba(217,58,87,0.09);
+  --correct-border:rgba(0,168,114,0.3);
+  --wrong-border:rgba(217,58,87,0.3);
+  --glow:rgba(0,119,204,0.1);
+  --glow2:rgba(212,135,10,0.1);
+}
+body.light::before{
+  background-image:radial-gradient(circle,rgba(0,120,200,0.06) 1px,transparent 1px);
+}
+body.light::after{
+  background:radial-gradient(ellipse,rgba(0,120,200,0.07) 0%,transparent 65%);
+}
+body.light .orb-bottom{
+  background:radial-gradient(ellipse,rgba(212,135,10,0.07) 0%,transparent 65%);
+}
+body.light .opt:hover:not(.disabled){
+  background:rgba(0,119,204,0.05);
+  box-shadow:none;
+}
+body.light .opt::before{
+  background:linear-gradient(90deg,rgba(0,119,204,0.05),transparent 60%);
+}
+body.light .qcard{
+  box-shadow:0 2px 20px rgba(0,0,0,0.07),0 0 0 1px rgba(0,120,200,0.06);
+}
+body.light .qcard::before{
+  background:linear-gradient(90deg,transparent,rgba(0,119,204,0.15),transparent);
+}
+body.light .logo em{
+  text-shadow:0 0 24px rgba(0,119,204,0.35),0 0 50px rgba(0,119,204,0.1);
+}
+body.light .question-word{
+  text-shadow:none;
+}
+body.light .rbtn.primary{color:#fff;}
+body.light .mode-btn.active{color:#fff;}
+body.light .progress-fill{
+  box-shadow:0 0 8px rgba(0,119,204,0.4),0 0 20px rgba(0,119,204,0.15);
+}
+body.light .stat{
+  box-shadow:0 1px 8px rgba(0,0,0,0.06);
+}
+body.light .flash-card{
+  box-shadow:0 2px 20px rgba(0,0,0,0.07);
+}
+body.light .flash-card:hover{
+  box-shadow:0 4px 24px rgba(0,0,0,0.1),0 0 16px rgba(0,119,204,0.06);
+}
+body.light .flash-card::before{
+  background:linear-gradient(90deg,transparent,rgba(0,119,204,0.12),transparent);
+}
+
+/* Theme toggle button */
+.theme-toggle{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:50%;
+  font-size:16px;
+  flex-shrink:0;
+  align-self:flex-start;
+  transition:all .15s;
+  user-select:none;
+}
+.theme-toggle:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 12px var(--glow);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Layered background: dots + dual glow orbs */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(0,180,255,0.07) 1px,transparent 1px);
+  background-size:28px 28px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';
+  position:fixed;
+  top:-15vh;left:60%;
+  width:60vw;height:55vh;
+  background:radial-gradient(ellipse,rgba(0,200,255,0.13) 0%,transparent 65%);
+  pointer-events:none;z-index:0;
+}
+.orb-bottom{
+  position:fixed;
+  bottom:-10vh;left:-5vw;
+  width:45vw;height:40vh;
+  background:radial-gradient(ellipse,rgba(245,166,35,0.1) 0%,transparent 65%);
+  pointer-events:none;z-index:0;
+}
+
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:2.5rem 2.5rem 4rem}
+
+/* Two-column quiz layout on wide screens */
+.quiz-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
+.quiz-left{display:flex;flex-direction:column;gap:1rem;min-height:320px;justify-content:center}
+.quiz-right{display:flex;flex-direction:column;gap:9px;justify-content:center}
+@media(max-width:720px){
+  .quiz-layout{grid-template-columns:1fr}
+  .wrap{padding:1.5rem 1rem 3rem}
+}
+
+/* Header */
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem}
+.logo-wrap{display:flex;flex-direction:column;gap:2px}
+.logo-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--accent);
+  opacity:0.7;
+}
+.logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.8rem,9vw,4.4rem);
+  letter-spacing:0.06em;line-height:0.95;
+  color:var(--text);
+}
+.logo em{
+  font-style:normal;
+  color:var(--accent);
+  text-shadow:0 0 24px rgba(0,212,255,0.55),0 0 50px rgba(0,212,255,0.2);
+}
+.logo-sub{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:3px;
+}
+.version-tag{
+  font-family:'DM Mono',monospace;
+  font-size:9px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  opacity:1;
+  margin-top:5px;
+}
+
+/* Mode toggle */
+.mode-toggle{
+  display:flex;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:40px;
+  padding:4px;gap:2px;
+  box-shadow:0 0 16px rgba(0,212,255,0.06);
+}
+.mode-btn{
+  padding:7px 18px;
+  border:none;border-radius:36px;
+  background:transparent;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.06em;
+  cursor:pointer;transition:all .2s;
+  text-transform:uppercase;
+}
+.mode-btn.active{
+  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
+  color:#050810;
+  font-weight:500;
+  box-shadow:0 0 12px rgba(0,212,255,0.35);
+}
+
+/* Direction toggle */
+.dir-row{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem}
+.dir-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.dir-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:40px;padding:3px;gap:2px;flex:1}
+.dir-btn{
+  flex:1;padding:6px 10px;
+  border:none;border-radius:36px;
+  background:transparent;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.05em;
+  cursor:pointer;transition:all .2s;
+  text-transform:uppercase;white-space:nowrap;
+}
+.dir-btn.active{
+  background:rgba(245,166,35,0.15);
+  color:var(--accent2);
+  border:1px solid rgba(245,166,35,0.3);
+  box-shadow:0 0 10px rgba(245,166,35,0.15);
+}
+
+/* Lesson pills */
+.lesson-row{display:flex;gap:7px;margin-bottom:1.75rem;flex-wrap:wrap}
+.lesson-pill{
+  padding:6px 13px;
+  border:1px solid var(--border);
+  border-radius:30px;
+  background:var(--surface);
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.06em;
+  cursor:pointer;transition:all .15s;
+  text-transform:uppercase;white-space:nowrap;
+}
+.lesson-pill:hover{border-color:var(--border2);color:var(--text)}
+.lesson-pill.active{
+  border-color:var(--accent);
+  background:rgba(0,212,255,0.07);
+  color:var(--accent);
+  box-shadow:0 0 10px rgba(0,212,255,0.15);
+}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+.stat{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;text-align:center;
+  backdrop-filter:blur(8px);
+}
+.stat-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:4px;
+}
+.stat-val{
+  font-size:22px;font-weight:300;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+
+/* Progress bar */
+.progress-bar{height:2px;background:var(--surface2);border-radius:2px;margin-bottom:1.75rem;overflow:visible}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent2),var(--accent));
+  border-radius:2px;
+  transition:width .4s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 8px rgba(0,212,255,0.6),0 0 20px rgba(0,212,255,0.25);
+  position:relative;
+}
+.progress-fill::after{
+  content:'';
+  position:absolute;right:-3px;top:50%;transform:translateY(-50%);
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent),0 0 16px var(--accent);
+}
+
+/* Question card */
+.qcard{
+  background:linear-gradient(145deg,var(--surface),var(--surface2));
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:2rem;
+  animation:fadeUp .3s ease both;
+  box-shadow:0 4px 40px rgba(0,0,0,0.12),0 0 0 1px rgba(0,200,255,0.04);
+  backdrop-filter:blur(12px);
+  position:relative;overflow:hidden;
+}
+.qcard::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,0.25),transparent);
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+.lesson-tag{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--accent2);
+  margin-bottom:1.1rem;
+  opacity:0.85;
+}
+.question{
+  font-size:13px;color:var(--muted);
+  margin-bottom:0.35rem;font-weight:300;
+  letter-spacing:0.02em;
+}
+.question-word{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.4rem,5vw,4.8rem);
+  letter-spacing:0.05em;color:var(--text);
+  line-height:1.1;margin-bottom:1.75rem;
+  text-shadow:0 0 30px rgba(0,212,255,0.12);
+}
+
+/* Options */
+.options{display:flex;flex-direction:column;gap:9px}
+.opt{
+  padding:13px 17px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  cursor:pointer;
+  font-size:14px;font-family:'DM Sans',sans-serif;
+  color:var(--text);
+  background:var(--surface);
+  text-align:left;
+  transition:all .15s;
+  line-height:1.55;
+  position:relative;overflow:hidden;
+}
+.opt::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(0,212,255,0.05),transparent 60%);
+  opacity:0;transition:opacity .15s;
+}
+.opt:hover:not(.disabled)::before{opacity:1}
+.opt:hover:not(.disabled){
+  border-color:var(--border2);
+  background:rgba(0,212,255,0.04);
+  box-shadow:0 0 16px rgba(0,212,255,0.08);
+  transform:translateX(2px);
+}
+.opt.correct{
+  border-color:var(--correct-border);
+  background:var(--correct-bg);
+  color:var(--correct);
+  box-shadow:0 0 16px rgba(0,229,160,0.12);
+}
+.opt.wrong{
+  border-color:var(--wrong-border);
+  background:var(--wrong-bg);
+  color:var(--wrong);
+}
+.opt.disabled{cursor:default;transform:none}
+.opt-letter{
+  display:inline-block;
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.06em;
+  color:var(--muted);
+  margin-right:10px;
+  min-width:16px;
+}
+.opt.correct .opt-letter{color:var(--correct)}
+.opt.wrong .opt-letter{color:var(--wrong)}
+
+/* Next button */
+.next-btn{
+  width:100%;margin-top:12px;padding:13px;
+  border:1px solid var(--border2);
+  border-radius:13px;
+  background:transparent;
+  color:var(--accent);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+  animation:fadeUp .25s .1s ease both;
+}
+.next-btn:hover{
+  background:rgba(0,212,255,0.08);
+  border-color:var(--accent);
+  box-shadow:0 0 20px rgba(0,212,255,0.15);
+}
+
+/* Results */
+.result{text-align:center;padding:2.5rem 1.5rem;animation:fadeUp .35s ease both}
+.big-score{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(5rem,20vw,9rem);
+  letter-spacing:0.02em;line-height:1;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:0.5rem;
+  filter:drop-shadow(0 0 20px rgba(0,212,255,0.3));
+}
+.result-pct{
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:1rem;
+}
+.result-msg{
+  font-size:15px;color:var(--text);
+  font-weight:300;line-height:1.75;
+  max-width:400px;margin:0 auto 2rem;
+  opacity:0.8;
+}
+.result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:2rem}
+.rbtn{
+  padding:11px 24px;
+  border:1px solid var(--border2);
+  border-radius:30px;
+  background:transparent;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.06em;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
+}
+.rbtn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 14px rgba(0,212,255,0.15)}
+.rbtn.primary{
+  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
+  border-color:transparent;color:#050810;
+  box-shadow:0 0 20px rgba(0,212,255,0.3);
+}
+.rbtn.primary:hover{box-shadow:0 0 30px rgba(0,212,255,0.5);filter:brightness(1.08)}
+
+/* Review section */
+.review-section{text-align:left;margin-top:1.5rem}
+.review-header{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:12px;
+}
+.review-item{padding:12px 0;border-bottom:1px solid var(--border)}
+.review-word{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.4rem;letter-spacing:0.04em;
+  color:var(--wrong);margin-bottom:3px;
+}
+.review-def{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* Flash cards */
+.flash-card{
+  background:linear-gradient(145deg,var(--surface),var(--surface2));
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:2.5rem 2rem;min-height:280px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:all .2s;
+  animation:fadeUp .3s ease both;
+  text-align:center;
+  position:relative;overflow:hidden;
+  margin-bottom:1rem;
+  box-shadow:0 4px 40px rgba(0,0,0,0.12);
+}
+.flash-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,0.2),transparent);
+}
+.flash-card::after{
+  content:'TAP TO FLIP';
+  position:absolute;bottom:14px;right:18px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.12em;color:var(--muted);opacity:0.4;
+}
+.flash-card:hover{
+  border-color:var(--border2);
+  box-shadow:0 8px 40px rgba(0,0,0,0.15),0 0 20px rgba(0,212,255,0.06);
+}
+.flash-card.flipped{
+  background:linear-gradient(145deg,var(--surface2),var(--surface));
+  border-color:rgba(245,166,35,0.2);
+  box-shadow:0 4px 40px rgba(0,0,0,0.12),0 0 20px rgba(245,166,35,0.07);
+}
+.flash-card.sentence{
+  background:linear-gradient(145deg,var(--surface2),var(--surface));
+  border-color:rgba(0,229,160,0.2);
+  box-shadow:0 4px 40px rgba(0,0,0,0.12),0 0 20px rgba(0,229,160,0.07);
+}
+.flash-sentence{
+  font-size:16px;font-weight:300;
+  color:var(--text);line-height:1.8;max-width:480px;
+}
+.flash-sentence em{
+  font-style:italic;color:var(--accent2);font-weight:400;
+}
+.flash-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:1rem;
+}
+.flash-word{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.8rem,10vw,4.5rem);
+  letter-spacing:0.05em;line-height:1;
+  color:var(--text);
+  text-shadow:0 0 30px rgba(0,212,255,0.1);
+}
+.flash-def{
+  font-size:16px;font-weight:300;
+  color:var(--text);line-height:1.7;max-width:480px;
+}
+.flash-lesson{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.08em;color:var(--accent2);
+  margin-top:1rem;opacity:0.8;
+}
+
+/* Flash nav */
+.flash-nav{display:flex;gap:10px;justify-content:center}
+.fnav-btn{
+  flex:1;max-width:140px;padding:11px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface);
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.06em;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
+}
+.fnav-btn:hover{
+  border-color:var(--border2);
+  background:var(--surface2);
+  color:var(--accent);
+}
+
+.fnav-toggle{
+  flex:1;max-width:140px;padding:11px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface);
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.06em;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+.fnav-toggle .toggle-label{font-size:9px;letter-spacing:0.1em;opacity:0.6}
+.fnav-toggle.on{
+  border-color:var(--accent2);
+  background:rgba(245,166,35,0.08);
+  color:var(--accent2);
+  box-shadow:0 0 10px rgba(245,166,35,0.12);
+}
+.fnav-toggle:hover{border-color:var(--border2);}
+
+
+.example-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:9px;
+  padding:5px 12px;
+  border:1px solid rgba(245,166,35,0.3);
+  border-radius:20px;
+  background:rgba(245,166,35,0.07);
+  color:var(--accent2);
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.09em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+  animation:fadeUp .2s ease both;
+}
+.example-btn:hover{
+  background:rgba(245,166,35,0.14);
+  border-color:rgba(245,166,35,0.55);
+  box-shadow:0 0 12px rgba(245,166,35,0.18);
+}
+.example-btn svg{flex-shrink:0}
+.example-panel{
+  margin-top:10px;
+  padding:13px 15px;
+  border:1px solid rgba(245,166,35,0.18);
+  border-radius:12px;
+  background:rgba(245,166,35,0.05);
+  animation:fadeUp .25s ease both;
+  font-size:13px;
+  line-height:1.7;
+}
+.example-panel .ex-sentence{
+  color:var(--text);font-weight:300;margin-bottom:6px;
+}
+.example-panel .ex-sentence em{
+  font-style:italic;color:var(--accent2);
+}
+.example-panel .ex-tip{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.04em;color:var(--muted);
+  border-top:1px solid rgba(245,166,35,0.12);
+  padding-top:7px;margin-top:2px;
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+
+/* Glossary button */
+.glossary-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 15px;
+  border:1px solid var(--border2);
+  border-radius:30px;
+  background:var(--surface);
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+  flex-shrink:0;
+  align-self:flex-start;
+}
+.glossary-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  box-shadow:0 0 14px var(--glow);
+}
+
+/* Glossary overlay */
+.glossary-overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:var(--bg);
+  z-index:100;
+  overflow-y:scroll;
+  overflow-x:hidden;
+  animation:fadeUp .25s ease both;
+}
+.glossary-overlay.open{display:block;}
+.glossary-layout{
+  display:flex;
+  gap:0;
+  max-width:1060px;
+  margin:0 auto;
+  padding:2.5rem 1.5rem 6rem 2.5rem;
+  align-items:flex-start;
+  position:relative;
+  min-height:101%;
+}
+@media(max-width:720px){
+  .glossary-layout{padding:1.5rem 1rem 6rem;}
+}
+.glossary-main{
+  flex:1;
+  min-width:0;
+  padding-right:0;
+}
+
+
+.glossary-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:2.5rem;
+  gap:1rem;
+}
+.glossary-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2rem,7vw,3.2rem);
+  letter-spacing:0.06em;
+  color:var(--text);
+}
+.glossary-title em{
+  font-style:normal;
+  color:var(--accent);
+  text-shadow:0 0 24px rgba(0,212,255,0.5),0 0 50px rgba(0,212,255,0.15);
+}
+.glossary-back{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 20px;
+  border:1px solid var(--border2);
+  border-radius:30px;
+  background:var(--surface);
+  color:var(--accent);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+  flex-shrink:0;
+}
+.glossary-back:hover{
+  background:rgba(0,212,255,0.08);
+  box-shadow:0 0 18px var(--glow);
+}
+.glossary-count{
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--text);
+  opacity:0.5;
+  margin-bottom:2.5rem;
+}
+.glossary-lesson{
+  margin-bottom:3rem;
+}
+.glossary-lesson-header{
+  display:flex;align-items:baseline;gap:14px;
+  margin-bottom:1.1rem;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border2);
+  transition:all .3s;
+}
+.glossary-lesson-header.flash{
+  animation:lessonFlash .6s ease both;
+}
+@keyframes lessonFlash{
+  0%  {opacity:1;transform:translateX(0)}
+  15% {opacity:0.3;transform:translateX(-8px)}
+  35% {opacity:1;transform:translateX(6px)}
+  55% {opacity:0.7;transform:translateX(-3px)}
+  75% {opacity:1;transform:translateX(2px)}
+  100%{opacity:1;transform:translateX(0)}
+}
+.glossary-lesson-num{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;
+  letter-spacing:0.06em;
+  color:var(--accent2);
+}
+.glossary-lesson-name{
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--text);
+  opacity:0.55;
+}
+.glossary-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.glossary-entry{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:14px;
+  padding:20px 22px;
+  transition:border-color .15s;
+}
+.glossary-entry:hover{border-color:var(--accent);box-shadow:0 0 14px var(--glow);}
+.glossary-word{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.9rem;
+  letter-spacing:0.06em;
+  color:var(--text);
+  margin-bottom:6px;
+}
+.glossary-def{
+  font-size:15px;
+  color:var(--text);
+  opacity:0.75;
+  line-height:1.65;
+  font-family:'DM Sans',sans-serif;
+  font-weight:300;
+}
+
+
+.kbd-hint{
+  display:flex;gap:1.5rem;justify-content:center;
+  margin-top:10px;
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.06em;color:var(--text);
+  opacity:0.75;
+}
+kbd{
+  display:inline-block;
+  padding:3px 8px;
+  border:1px solid var(--border2);
+  border-radius:5px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--text);
+  margin:0 2px;
+  background:var(--surface2);
+  box-shadow:0 2px 0 var(--border2);
+}
+</style>
+</head>
+<body>
+<div class="orb-bottom"></div>
+<div class="wrap">
+  <div class="header">
+    <div class="logo-wrap">
+      <span class="logo-eyebrow">English Final · Vocabulary</span>
+      <div class="logo">VOCABULARY <em>QUIZ</em></div>
+      <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
+      <span class="version-tag">v2.0</span>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
+          <rect x="1" y="6.3" width="12" height="1.4" rx="0.7" fill="currentColor"/>
+          <rect x="1" y="10.6" width="8" height="1.4" rx="0.7" fill="currentColor"/>
+        </svg>
+        All Words
+      </button>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-quiz" onclick="setMode('quiz')">Practice</button>
+        <button class="mode-btn" id="mode-flash" onclick="setMode('flash')">Flashcards</button>
+      </div>
+      <div class="theme-toggle" onclick="setTheme(document.body.classList.contains('light')?'dark':'light')" title="Toggle theme" style="cursor:pointer">
+        <span id="theme-icon">🌙</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Glossary overlay -->
+  <div class="glossary-overlay" id="glossary-overlay">
+    <div class="glossary-layout">
+      <div class="glossary-main">
+        <div class="glossary-topbar">
+          <div>
+            <div class="glossary-title">ALL <em>WORDS</em></div>
+          </div>
+          <button class="glossary-back" onclick="closeGlossary()">← Back to Quiz</button>
+        </div>
+        <div class="glossary-count" id="glossary-count"></div>
+        <div id="glossary-body"></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="lesson-row" id="lesson-row"></div>
+  <div class="dir-row" id="dir-row">
+    <span class="dir-label">Mode</span>
+    <div class="dir-toggle">
+      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Word → Def</button>
+      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Def → Word</button>
+      <button class="dir-btn" id="dir-random" onclick="setDir('random')">Random</button>
+    </div>
+  </div>
+  <div id="app"></div>
+  <div style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border2);text-align:center;">
+    <p style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.07em;color:var(--text);opacity:0.55;line-height:2;">
+      Have a problem, suggestion, or spot a mistake in a word or definition?<br>
+      Contact <a href="https://mail.google.com/mail/?view=cm&to=bieberna27@collegedaleacademy.com" target="_blank" style="color:var(--accent);text-decoration:none;opacity:1;transition:opacity .15s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">bieberna27@collegedaleacademy.com</a>
+      <span style="display:block;margin-top:5px;font-size:10px;opacity:0.6;letter-spacing:0.06em;">All feedback is welcome and will be looked into.</span>
+    </p>
+  </div>
+</div>
+<script>
+const LESSON_NAMES={1:'Language',2:'Possibility',3:'Change',4:'Mind & Knowledge',5:'Avoidance',6:'Sequence',7:'Criticism',8:'Responsibility',9:'Behavior',10:'Skill',11:'Commands',12:'Size',13:'Imitation',14:'Pairs',15:'Reversal'};
+const ALL=[
+  {w:"annotation",d:"A critical or explanatory note",l:1,e:"In the margins of her borrowed book, she had left an annotation on nearly every page, questioning the author's logic in her own scribbled hand."},
+  {w:"appellation",d:"A name, title, or designation",l:1,e:"The tiny coastal village had earned the appellation \"The Pearl of the Atlantic\" long before any tourist had ever heard of it."},
+  {w:"eponym",d:"A person whose name is the source of the name of something",l:1,e:"The doctor who first identified the disease became its eponym, his name permanently attached to the suffering of thousands of patients."},
+  {w:"linguistics",d:"The study of the nature, structure, and variation of language",l:1,e:"Her passion for linguistics drove her to study how the same human mouth could produce wildly different sounds depending solely on where in the world it grew up."},
+  {w:"malapropism",d:"Ridiculous misuse of a word by confusing it with one of similar sound",l:1,e:"His most memorable malapropism came when he confidently declared the new policy would be a \"suppository of wisdom,\" and no one in the room knew whether to correct him or just move on."},
+  {w:"neologism",d:"A new word, expression, or usage",l:1,e:"\"Phantom vibration\" is a relatively recent neologism, coined only after millions of people began feeling their silent phones buzz when they weren't even in their pockets."},
+  {w:"parlance",d:"A particular manner of speaking",l:1,e:"In the parlance of the trading floor, a stock that craters overnight is simply said to have \"gone off a cliff.\""},
+  {w:"patois",d:"A regional dialect, especially a nonstandard one with no written tradition",l:1,e:"Visitors to the remote mountain village could barely follow a conversation, as the locals spoke a patois their ancestors had carried up from the valley centuries ago."},
+  {w:"polyglot",d:"A person who speaks several languages; also: using several languages",l:1,e:"A true polyglot, she effortlessly shifted from Spanish to Mandarin to Arabic depending on who sat down across from her at the summit."},
+  {w:"vulgar",d:"Of or related to the language of the common people; crude, indecent",l:1,e:"The comedian's act started as sharp social commentary but turned increasingly vulgar, until the crude shock humor had emptied half the seats by intermission."},
+  {w:"contingent",d:"Conditional; dependent on other things; also: a representative group within a larger group",l:2,e:"His acceptance into the program was contingent on passing a background check that hadn't even been scheduled yet."},
+  {w:"eventuality",d:"Something that may occur; a possibility",l:2,e:"The general had prepared for every eventuality, including the unlikely possibility that the bridge would be destroyed before his troops arrived."},
+  {w:"implausible",d:"Difficult to believe; not likely or credible",l:2,e:"The defendant's alibi was implausible — he claimed to have been in two cities at the same time."},
+  {w:"inconceivable",d:"Impossible to comprehend or fully grasp; so unlikely as to seem impossible",l:2,e:"It was inconceivable to the villagers that the mountain they had worshipped for generations could simply crumble into the sea overnight."},
+  {w:"in vain",d:"Without success; completely ineffective",l:2,e:"She called his name in vain across the empty parking lot, the sound swallowed by wind and silence."},
+  {w:"perchance",d:"Perhaps; possibly",l:2,e:"Perchance they would meet again someday, but she boarded the train without turning back to check."},
+  {w:"preposterous",d:"Absurd; contrary to nature, reason, or common sense",l:2,e:"The committee found it preposterous that anyone would suggest demolishing a 300-year-old cathedral to build a parking garage."},
+  {w:"proclivity",d:"A natural inclination; a tendency",l:2,e:"His proclivity for arriving late had become so predictable that his colleagues simply started meetings without him."},
+  {w:"prone",d:"Having a tendency; inclined; likely to do or have something",l:2,e:"She was prone to overthinking even the smallest decisions, often spending an hour debating what to order for lunch."},
+  {w:"theoretical",d:"Restricted to ideas; abstract or unproven",l:2,e:"The physicist's model was entirely theoretical — elegant on paper but impossible to test with any existing instrument."},
+  {w:"evolve",d:"To develop or achieve gradually",l:3,e:"The company had to evolve or be left behind, slowly shifting from a print-only publisher to a digital media powerhouse."},
+  {w:"immutable",d:"Unchangeable; not subject or susceptible to change",l:3,e:"The laws of physics are immutable — no amount of wishful thinking will make gravity pull things upward."},
+  {w:"inveterate",d:"Firmly established and having existed for a long time; deep-rooted; habitual",l:3,e:"An inveterate gambler, he had lost three fortunes and was already chasing a fourth."},
+  {w:"malleable",d:"Capable of being shaped or formed; easily controlled or influenced",l:3,e:"Young children are remarkably malleable, absorbing the values and habits of whoever raises them almost without resistance."},
+  {w:"metamorphosis",d:"A marked change in form, character, or function; a transformation",l:3,e:"After two years abroad, she returned home having undergone a complete metamorphosis — in language, outlook, and even the way she carried herself."},
+  {w:"modulate",d:"To adjust or adapt to a certain level or proportion; to regulate",l:3,e:"A skilled teacher knows how to modulate their tone, shifting from playful to serious the moment the classroom loses focus."},
+  {w:"protean",d:"Readily taking on different forms, characteristics, or meanings",l:3,e:"The protean actor was unrecognizable from one film to the next, slipping into each new role like a second skin."},
+  {w:"sporadic",d:"Scattered; occurring at irregular intervals; isolated; infrequent",l:3,e:"Contact with the expedition team had been sporadic — a brief message every few days, then long stretches of silence."},
+  {w:"transmute",d:"To change from one form to another; to transform",l:3,e:"The alchemist believed he could transmute ordinary lead into gold, though his notebooks revealed a man chasing something far more elusive than metal."},
+  {w:"volatile",d:"Tending to vary often; inconstant; tending toward violence; explosive",l:3,e:"The market had been volatile all week, lurching between record highs and stomach-dropping lows with no clear pattern."},
+  {w:"abstruse",d:"Difficult to understand",l:4,e:"The philosopher's later essays became increasingly abstruse, written as though he had stopped caring whether anyone followed along."},
+  {w:"acumen",d:"Quickness and keenness of insight or judgment",l:4,e:"Her financial acumen was evident by thirty — she had quietly doubled her initial investment while her peers were still learning to budget."},
+  {w:"ascertain",d:"To discover or determine with certainty through examination or experimentation",l:4,e:"Investigators worked for weeks to ascertain the exact cause of the structural failure before releasing any findings to the public."},
+  {w:"cerebral",d:"Of or relating to the brain; appealing to the intellect",l:4,e:"The film was deeply cerebral, the kind that rewards viewers who come prepared to think rather than simply watch."},
+  {w:"faculty",d:"A natural power or ability; a division of a university or group of teachers",l:4,e:"Even in his nineties, his faculty for recalling precise historical dates remained sharper than most people's in their prime."},
+  {w:"obfuscate",d:"To make difficult to understand; to darken or make dim",l:4,e:"The contract had been deliberately written to obfuscate the terms, burying the cancellation fee in four pages of dense legalese."},
+  {w:"ruminate",d:"To think deeply about; to turn a matter over and over in one's mind",l:4,e:"He would often ruminate for days after an argument, turning the exchange over and over in his mind until he had worn it smooth."},
+  {w:"stymie",d:"To prevent from making progress; to frustrate or thwart efforts",l:4,e:"The constant budget cuts continued to stymie the research team, leaving promising projects half-finished on shelves."},
+  {w:"surmise",d:"To guess; to draw a conclusion without sufficient evidence",l:4,e:"From the muddy boots and the fading tan line, the detective was able to surmise that the man had only recently returned from somewhere warm and rural."},
+  {w:"tenet",d:"A principle or belief held by a person or organization",l:4,e:"Central to her philosophy was the tenet that no person is entirely beyond the reach of compassion."},
+  {w:"abeyance",d:"Suspension; a condition of being temporarily set aside",l:5,e:"The construction project was held in abeyance while the city council debated whether the land had been properly zoned."},
+  {w:"abstemious",d:"Eating and drinking little or in moderation; restricted to bare necessities",l:5,e:"He was abstemious by habit, rarely finishing a glass of wine and never touching dessert, even at celebrations."},
+  {w:"circumvent",d:"To get around by clever maneuvering; to avoid by going around",l:5,e:"Rather than challenge the policy directly, she found a way to circumvent it entirely by filing the request through a different department."},
+  {w:"elude",d:"To escape from by daring or cleverness; to escape the grasp or understanding of",l:5,e:"The answer continued to elude him despite hours of research, hovering just beyond the reach of what he could prove."},
+  {w:"eschew",d:"To avoid, especially on moral or practical grounds; to abstain from",l:5,e:"She had long chosen to eschew social media, preferring phone calls and handwritten letters to the curated noise of the internet."},
+  {w:"evasion",d:"The act of escaping or avoiding by cleverness or deceit",l:5,e:"His evasion of the question was so smooth that half the audience didn't even notice he had failed to answer it."},
+  {w:"malinger",d:"To pretend to be ill or injured in order to avoid duty or work",l:5,e:"Suspected of trying to malinger, the soldier was sent to the base physician, who found nothing physically wrong with him."},
+  {w:"oblique",d:"Indirect; intentionally vague or ambiguous; misleading, devious, or dishonest",l:5,e:"His apology was oblique at best — full of passive constructions and carefully worded regrets that never quite admitted fault."},
+  {w:"shirk",d:"To neglect, put off, or avoid a duty or responsibility",l:5,e:"She had never once been known to shirk a responsibility, which made her sudden disappearance from the project all the more surprising."},
+  {w:"shun",d:"To willfully ignore; to stay away from",l:5,e:"After the scandal broke, even his closest colleagues began to shun him, avoiding eye contact in the hallways."},
+  {w:"converge",d:"To come together at the same point from different directions; to meet",l:6,e:"Thousands of protesters began to converge on the capital from every direction as news of the ruling spread."},
+  {w:"crux",d:"The main, central, or critical point or feature",l:6,e:"The crux of the dispute wasn't money — it was who had the authority to make the final call."},
+  {w:"degradation",d:"A decline to a lower condition, quality, or level",l:6,e:"Years of neglect had led to the degradation of what was once the city's finest concert hall."},
+  {w:"initiate",d:"To take the first steps in a process; to formally admit someone into an organization through a ritual",l:6,e:"The fraternity planned to initiate three new members at the end of the semester through a ceremony kept secret from outsiders."},
+  {w:"penultimate",d:"Second from the last; next to last",l:6,e:"The penultimate chapter was the strongest in the book — so strong, in fact, that the ending felt like a letdown by comparison."},
+  {w:"pivotal",d:"Being of vital importance; crucial",l:6,e:"The discovery of penicillin was pivotal not just in medicine, but in fundamentally changing humanity's relationship with disease."},
+  {w:"sequel",d:"A continuation; something that follows; the next installment of something",l:6,e:"The sequel captured everything that made the original compelling while quietly fixing the parts that hadn't worked."},
+  {w:"supersede",d:"To replace; to take the place of",l:6,e:"The new regulations were set to supersede all previous safety guidelines, rendering years of existing documentation obsolete."},
+  {w:"tangential",d:"Superficially relevant; only slightly connected",l:6,e:"His comment about the history of paper currency was interesting but entirely tangential to the question of whether the invoice had been paid."},
+  {w:"terminate",d:"To bring to an end or halt",l:6,e:"The board voted unanimously to terminate the contract after the third missed deadline in as many months."},
+  {w:"aspersions",d:"Attacks on a person's character or honesty; damaging or unfavorable remarks",l:7,e:"He had spent years casting aspersions on his rival's reputation without ever producing a single piece of evidence to back them up."},
+  {w:"compunction",d:"A strong uneasiness caused by a sense of guilt; a sting of conscience",l:7,e:"She felt genuine compunction after snapping at the intern, and spent the rest of the afternoon figuring out how to make it right."},
+  {w:"derision",d:"Hateful or mocking laughter; ridicule",l:7,e:"The proposal was met with derision from the older faculty members, who laughed openly before the presenter had even finished."},
+  {w:"disapprobation",d:"Moral disapproval",l:7,e:"His decision to drop out of medical school drew quiet disapprobation from his parents, who said little but made their feelings unmistakable."},
+  {w:"ostracize",d:"To banish or exclude from a group; to shun",l:7,e:"After speaking out against the group's leadership, she found herself gradually ostracized — uninvited from meetings, left off email chains."},
+  {w:"rebuke",d:"To criticize sharply; also: strong criticism",l:7,e:"The judge issued a sharp rebuke to the attorney for repeatedly interrupting the witness."},
+  {w:"revulsion",d:"A sudden, intense feeling of disgust",l:7,e:"She felt a wave of revulsion upon discovering that the \"natural ingredients\" in the product included several compounds she couldn't pronounce."},
+  {w:"scurrilous",d:"Vulgar, coarse, or abusive in expression; foul-mouthed",l:7,e:"The tabloid's scurrilous coverage of the celebrity's private life crossed every line between journalism and cruelty."},
+  {w:"spurn",d:"To reject scornfully",l:7,e:"He had chosen to spurn every offer of help, insisting he could solve the problem alone even as it grew beyond him."},
+  {w:"vitriolic",d:"Intensely and bitterly harsh; stinging",l:7,e:"The review was so vitriolic that readers began to wonder if the critic had a personal grudge against the author."},
+  {w:"accountable",d:"Responsible; required to answer for one's actions; explainable",l:8,e:"The new oversight board was created specifically to hold contractors accountable for how public funds were spent."},
+  {w:"assiduous",d:"Giving constant attention; hard-working; conscientious",l:8,e:"An assiduous student, she reviewed her notes within an hour of every lecture and never left a concept unclear."},
+  {w:"default",d:"A situation that remains in effect unless specifically changed; failure to meet an obligation",l:8,e:"By default, the software shares your location unless you manually dig through the settings to turn it off."},
+  {w:"feckless",d:"Ineffective; feeble; useless; careless and irresponsible",l:8,e:"The feckless manager had allowed months to pass without addressing the team's most basic resource requests."},
+  {w:"incumbent",d:"Imposed as a duty; currently holding a position or office",l:8,e:"It is incumbent on anyone in a position of public trust to disclose potential conflicts of interest before they become problems."},
+  {w:"liability",d:"A legal responsibility or obligation; something that holds one back",l:8,e:"His unpredictable temper had become a liability to the campaign, overshadowing every policy message the team tried to push."},
+  {w:"mandatory",d:"Required or commanded by authority",l:8,e:"Attendance at the safety briefing was mandatory — no one was permitted on the floor without a confirmation stamp."},
+  {w:"negligence",d:"Lack of proper care or attention",l:8,e:"The lawsuit alleged that the hospital's negligence had directly contributed to the patient's decline."},
+  {w:"onerous",d:"Difficult to bear, carry, or do; troublesome; burdensome",l:8,e:"The paperwork required to apply for the grant was so onerous that several smaller organizations simply gave up."},
+  {w:"remiss",d:"Lax or careless in attending to duty",l:8,e:"She would have felt remiss not mentioning the water damage she'd noticed in the basement before the buyers signed anything."},
+  {w:"acquiesce",d:"To agree or accept passively or without protest",l:9,e:"Rather than escalate the argument, he chose to acquiesce, nodding along even as he quietly disagreed."},
+  {w:"adamant",d:"Stubbornly determined; not swayed by pleas, appeals, or reason",l:9,e:"She was adamant that the contract be reviewed by an independent attorney before anyone signed a word."},
+  {w:"balk",d:"To stubbornly refuse to do something; to stop short and refuse to go on",l:9,e:"The horse suddenly balked at the edge of the trail, refusing to go forward no matter how gently she urged it."},
+  {w:"camaraderie",d:"Comradeship; lighthearted good will and friendliness among companions",l:9,e:"What struck visitors most about the fire station wasn't the equipment — it was the easy camaraderie among the crew, built across years of shared stress."},
+  {w:"cantankerous",d:"Disagreeable; bad-tempered; likely to quarrel",l:9,e:"The cantankerous neighbor had filed four complaints about lawn height before the summer was even half over."},
+  {w:"compliance",d:"The act of going along with a request, demand, or rule; obedience",l:9,e:"The audit found full compliance with environmental regulations at every facility except one."},
+  {w:"presumptuous",d:"Excessively bold or forward; going beyond what is proper or right",l:9,e:"It seemed presumptuous to show up at the dinner party unannounced and then ask if there was enough food to go around."},
+  {w:"propitiate",d:"To soothe bad feelings; to appease; to regain friendship or good will",l:9,e:"He brought flowers and a handwritten apology hoping to propitiate his offended colleague before the tension spread to the rest of the team."},
+  {w:"tractable",d:"Easily managed or controlled",l:9,e:"The new software was remarkably tractable, bending easily to each department's specific workflow without much configuration."},
+  {w:"volition",d:"The power of choosing or deciding; free will",l:9,e:"She left the firm entirely of her own volition — no one pushed her out; she had simply outgrown the place."},
+  {w:"acuity",d:"Sharpness of vision or perception",l:10,e:"The surgeon's visual acuity was so precise that she could detect irregularities in tissue that would escape most trained eyes."},
+  {w:"consummate",d:"Supremely accomplished or skilled; to bring to completion or fulfillment",l:10,e:"A consummate host, he had anticipated every guest's preference before they had even walked through the door."},
+  {w:"cunning",d:"Marked by sly deception; crafty; skill in deception or dexterity in performance",l:10,e:"The fox's cunning was evident in the way it waited at the far end of the fence, knowing the dog could only run so far."},
+  {w:"deft",d:"Quick and skillful",l:10,e:"With a few deft strokes of the brush, she transformed what had been a shapeless blur into a convincing portrait."},
+  {w:"endowment",d:"A natural gift, ability, or quality; funds donated to an institution",l:10,e:"Her endowment for language was apparent early — by age four, she was speaking in complete sentences in two of them."},
+  {w:"facile",d:"Easy; achieved with little effort; working with effortless ease and fluency",l:10,e:"The pundit's facile analysis skipped over the messy historical context that made the situation so hard to resolve cleanly."},
+  {w:"inept",d:"Lacking skill or judgment; incompetent; clumsy",l:10,e:"The inept repairman left with the faucet dripping worse than before and a new crack in the cabinet below."},
+  {w:"prescient",d:"Having foreknowledge of events before they occur",l:10,e:"His warning about the housing market, written three years before the crash, now seemed almost eerily prescient."},
+  {w:"proficient",d:"Able to do something very well; highly skilled; expert",l:10,e:"After six months of daily practice, she had become proficient enough in Japanese to hold a basic conversation without notes."},
+  {w:"prowess",d:"Superior strength, skill, courage, or daring",l:10,e:"His prowess on the court earned him a scholarship, but it was his academic record that kept it."},
+  {w:"beseech",d:"To request earnestly; to implore or beg",l:11,e:"She would beseech him every evening to eat something, but he sat at the table unmoved, staring past his untouched plate."},
+  {w:"cajole",d:"To urge with gentle, repeated appeals or flattery; to wheedle",l:11,e:"It took twenty minutes of gentle cajoling to get the toddler out from under the table and back into his coat."},
+  {w:"elicit",d:"To bring out or call forth",l:11,e:"The researcher designed the interview questions carefully, hoping to elicit honest answers rather than rehearsed ones."},
+  {w:"enjoin",d:"To direct or order with authority; to prohibit or forbid",l:11,e:"The court moved quickly to enjoin the company from releasing the product until the safety review was complete."},
+  {w:"exigency",d:"The state of requiring much effort or immediate action; an urgent crisis",l:11,e:"The exigency of the situation left no time for a committee vote — a decision had to be made before the hour was out."},
+  {w:"imperious",d:"Arrogantly bossy; domineering; overbearing",l:11,e:"Her imperious manner with the wait staff made her dinner companions shift uncomfortably in their seats."},
+  {w:"injunction",d:"A command, a directive, or an order",l:11,e:"A federal injunction blocked the merger from moving forward while regulators completed their investigation."},
+  {w:"mendicant",d:"Dependent on begging for a living; a beggar",l:11,e:"The old mendicant sat at the cathedral steps every morning, his worn hat upturned on the stones beside him."},
+  {w:"query",d:"A question; an inquiry; to question, often with doubt",l:11,e:"The librarian fielded the query with patience, disappearing into the stacks and returning twenty minutes later with three possible answers."},
+  {w:"servile",d:"Slavish; behaving like a servant; excessively submissive",l:11,e:"His servile eagerness to agree with everything the director said made his coworkers trust his opinions less, not more."},
+  {w:"abound",d:"To be great in number or amount",l:12,e:"Wildlife abounds in the protected valley — hikers routinely spot deer, fox, and the occasional black bear within the first mile of the trail."},
+  {w:"amplitude",d:"Greatness of size or range; magnitude",l:12,e:"The amplitude of the sound wave determined how loudly the speaker produced each note — the higher the wave, the greater the volume."},
+  {w:"augment",d:"To add to; to increase the size, extent, or quantity of",l:12,e:"The school decided to augment its standard curriculum with weekly guest speakers from local industries."},
+  {w:"behemoth",d:"Something enormous in size or power",l:12,e:"The merger created a corporate behemoth that effectively controlled over sixty percent of the regional market overnight."},
+  {w:"brevity",d:"The quality of being short in duration; briefness; brief or concise expression",l:12,e:"His brevity at the podium was itself a kind of eloquence — he said what needed saying in four sentences and sat back down."},
+  {w:"diminish",d:"To make or become smaller or less; to lessen authority, reputation, or prestige",l:12,e:"Years of public mockery had begun to diminish his confidence in ways that even his closest friends could see."},
+  {w:"infinitesimal",d:"Too small to measure or calculate",l:12,e:"The margin of error was infinitesimal — a shift of less than a hundredth of a degree would invalidate the entire measurement."},
+  {w:"modicum",d:"A small or token amount",l:12,e:"Even a modicum of planning would have prevented the disaster — a checklist, a backup contact, anything at all."},
+  {w:"prodigious",d:"Impressively great in size, force, or extent; extraordinary; marvelous",l:12,e:"She had a prodigious memory for names, able to recall a face from a single brief meeting years later."},
+  {w:"quotidian",d:"Everyday; commonplace",l:12,e:"He found strange comfort in the quotidian rhythms of the neighborhood — the same dog walkers, the same coffee order, the same corner bench."},
+  {w:"banal",d:"Unoriginal and commonplace; trite",l:13,e:"The speech was banal from start to finish, each line more familiar and forgettable than the last."},
+  {w:"camouflage",d:"Concealment by disguise or coloring that matches surroundings; to hide by blending in",l:13,e:"The moth's wings were perfect camouflage against the bark, invisible to anything that wasn't already looking for it."},
+  {w:"emulate",d:"To strive to equal or excel, especially through imitation",l:13,e:"Younger players came to the gym early every morning hoping to emulate the footwork of the veteran point guard."},
+  {w:"mimicry",d:"Imitation or copying, especially of expression and gesture",l:13,e:"Her mimicry of the professor's accent and pacing was so accurate that the class could hear exactly who she was imitating before she said a word."},
+  {w:"platitude",d:"An overused, dull, and unoriginal phrase or statement",l:13,e:"The graduation speech was full of platitudes — \"follow your dreams,\" \"be the change\" — without a single concrete piece of advice."},
+  {w:"prototype",d:"An original type, form, or instance serving as a basis or standard; an early typical example",l:13,e:"The prototype sat in the lab looking deceptively simple, a rough first version of what would eventually become the company's best-selling product."},
+  {w:"redundant",d:"Extra; exceeding what is necessary; repetitive or needlessly wordy",l:13,e:"After the merger, entire departments were declared redundant, their functions already handled by the acquiring company's existing teams."},
+  {w:"rendition",d:"An interpretation or a performance of a musical or dramatic piece",l:13,e:"Her rendition of the classic ballad was slow and stripped down, letting the words carry the weight rather than the arrangement."},
+  {w:"sham",d:"Something false presented as genuine; not genuine; to put on a false appearance",l:13,e:"The credentials on his resume were a sham — every degree and former employer had been fabricated."},
+  {w:"simulation",d:"An imitation, representation, or reproduction of a situation or experience",l:13,e:"The pilots completed hundreds of hours in a simulation before ever sitting in a real cockpit with passengers aboard."},
+  {w:"adverse",d:"Opposing; contrary to one's interests; harmful or unfavorable",l:14,e:"The expedition pressed on despite adverse conditions — whiteout visibility, dropping temperatures, and equipment that had begun to fail."},
+  {w:"averse",d:"Referring to a feeling of avoidance and dislike",l:14,e:"He was deeply averse to confrontation, often letting disagreements fester rather than addressing them directly."},
+  {w:"ingenious",d:"Marked by inventive skill and imagination; extremely clever",l:14,e:"The engineer devised an ingenious solution using nothing but the materials already on hand, saving the project two weeks and a significant budget overrun."},
+  {w:"ingenuous",d:"Unable to deceive; openly straightforward",l:14,e:"Her ingenuous expression made it clear she had no idea the surprise party was in her honor — the delight on her face was completely unscripted."},
+  {w:"persecute",d:"To continuously mistreat or be cruel to someone; to annoy persistently",l:14,e:"For decades, the regime had used tax audits and travel bans to persecute journalists who refused to print the official line."},
+  {w:"prosecute",d:"To bring an action in a court of law; to continue an activity until it is completed",l:14,e:"The district attorney announced she would prosecute the case personally, a signal that the office considered it a priority."},
+  {w:"quorum",d:"The minimum number of people who must be present to make a decision",l:14,e:"With three members still stuck in traffic, the committee couldn't reach a quorum and had to delay the vote until everyone arrived."},
+  {w:"quota",d:"The amount of goods assigned to a person; a number representing an upper limit or required minimum",l:14,e:"Each sales rep was expected to meet a monthly quota, and those who fell short two quarters in a row were put on a performance plan."},
+  {w:"respectfully",d:"With regard and esteem; politely",l:14,e:"She disagreed respectfully, acknowledging his experience before explaining precisely where and why her analysis led her somewhere different."},
+  {w:"respectively",d:"Referring to things or people in the order given",l:14,e:"The gold and silver medals went to the Norwegian and Canadian competitors, respectively."},
+  {w:"abdicate",d:"To formally give up control, authority, or a high office",l:15,e:"The king chose to abdicate rather than sign a declaration of war against his own people."},
+  {w:"absolve",d:"To clear of guilt or blame; to relieve from a requirement or obligation",l:15,e:"The investigation's final report was expected to absolve the officer of wrongdoing, though few in the community were prepared to accept that conclusion."},
+  {w:"catharsis",d:"A purifying or refreshing release of emotional tension",l:15,e:"By the time the final scene arrived, the audience had been through enough with the characters that the catharsis felt completely earned."},
+  {w:"countermand",d:"To cancel or reverse an order or a policy",l:15,e:"The general moved quickly to countermand the order once it became clear the intelligence it was based on had been wrong."},
+  {w:"impunity",d:"Exemption from punishment or injury",l:15,e:"The powerful acted with near-total impunity for decades, confident that no court would dare hold them to account."},
+  {w:"recant",d:"To formally take back or reject a statement or belief",l:15,e:"Under pressure from the church, the scientist was forced to recant his findings, though history ultimately sided with his original conclusions."},
+  {w:"recoup",d:"To regain; to make up for",l:15,e:"The studio hoped a strong international release would allow it to recoup the losses from a disappointing domestic opening weekend."},
+  {w:"renounce",d:"To give up by formal announcement; to reject; to disown",l:15,e:"She stood at the podium and chose to publicly renounce the ideology she had spent her early twenties promoting."},
+  {w:"rescind",d:"To take back; to make void; to repeal",l:15,e:"The university moved swiftly to rescind the honorary degree once the full record of the recipient's conduct came to light."},
+  {w:"waive",d:"To give up voluntarily; to refrain from insisting on or enforcing",l:15,e:"The contractor agreed to waive the expediting fee given how long the original delay had dragged on."}
+];
+
+const LETTERS=['A','B','C','D'];
+let mode='quiz',dir='word',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
+
+function setDir(d){
+  dir=d;
+  ['word','def','random'].forEach(k=>{
+    document.getElementById('dir-'+k).className='dir-btn'+(d===k?' active':'');
+  });
+  startSession();
+}
+
+function buildLessonRow(){
+  const row=document.getElementById('lesson-row');
+  const pills=[{id:'all',label:'All 150'},...Array.from({length:15},(_,i)=>({id:i+1,label:`L${i+1}`}))];
+  row.innerHTML=pills.map(l=>`<button class="lesson-pill${l.id===selectedLesson?' active':''}" onclick="selectLesson('${l.id}')">${l.label}</button>`).join('');
+}
+
+function selectLesson(id){
+  selectedLesson=id==='all'?'all':parseInt(id);
+  buildLessonRow();startSession();
+}
+
+function getPool(){return selectedLesson==='all'?[...ALL]:ALL.filter(x=>x.l===selectedLesson);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('mode-quiz').className='mode-btn'+(m==='quiz'?' active':'');
+  document.getElementById('mode-flash').className='mode-btn'+(m==='flash'?' active':'');
+  document.getElementById('dir-row').style.display=m==='quiz'?'flex':'none';
+  startSession();
+}
+
+function startSession(){
+  orderedPool=getPool();
+  pool=flashShuffled?shuffle([...orderedPool]):[...orderedPool];
+  queue=shuffle([...orderedPool]);
+  current=0;score=0;answered=false;wrong=[];flashIdx=0;flashState=0;
+  render();
+}
+
+function makeOptions(item,showWord){
+  const p=getPool();
+  if(showWord){
+    // show definition, pick from words
+    const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
+    return shuffle([item,...w3]);
+  } else {
+    // show word, pick from definitions
+    const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
+    return shuffle([item,...w3]);
+  }
+}
+
+function render(){
+  const app=document.getElementById('app');
+  if(mode==='flash'){renderFlash(app);return;}
+  if(current>=queue.length){renderResult(app);return;}
+  const item=queue[current];
+  // determine direction for this question
+  const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
+  // attach direction to item for pick() to use
+  item._showDef=showDef;
+  const opts=shuffle(getPool().filter(x=>x.w!==item.w)).slice(0,3);
+  opts.push(item);
+  const shuffled=shuffle(opts);
+  const pct=Math.round((current/queue.length)*100);
+  const lname=selectedLesson==='all'?`Lesson ${item.l} · ${LESSON_NAMES[item.l]}`:LESSON_NAMES[item.l];
+  const dirLabel=showDef?'Which word fits this definition?':'Select the correct definition:';
+  const prompt=showDef?`<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`:
+    `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
+  const optsHtml=shuffled.map((o,i)=>{
+    const label=showDef?o.w:o.d;
+    const safeLabel=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeKey=(showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeCorrect=(showDef?item.w:item.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}','${safeCorrect}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
+  }).join('');
+  app.innerHTML=`
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Progress</div><div class="stat-val">${current+1}<span style="font-size:14px;color:var(--muted)">/${queue.length}</span></div></div>
+      <div class="stat"><div class="stat-label">Correct</div><div class="stat-val">${score}</div></div>
+      <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${current>0?Math.round(score/current*100):0}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="quiz-layout">
+      <div class="quiz-left qcard">
+        <div class="lesson-tag">${lname}</div>
+        ${prompt}
+      </div>
+      <div class="quiz-right">
+        <div class="options" id="opts">${optsHtml}</div>
+        <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
+      </div>
+    </div>
+    <div class="kbd-hint">
+      <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span>
+      <span><kbd>Space</kbd> to advance</span>
+    </div>`;
+}
+
+function pick(idx,chosen,correct){
+  if(answered)return;
+  answered=true;
+  const isRight=chosen===correct;
+  if(isRight){score++;}else{wrong.push(queue[current]);}
+  trackAnswer(isRight);
+  const item=queue[current];
+  const optEls=document.getElementById('opts').children;
+  for(let i=0;i<optEls.length;i++){
+    optEls[i].classList.add('disabled');
+    const letter=optEls[i].querySelector('.opt-letter');
+    const labelNode=letter.nextSibling;
+    const label=labelNode?labelNode.textContent.trim():optEls[i].textContent.trim().slice(1);
+    if(label===correct){
+      optEls[i].classList.add('correct');
+      // Inject example button below the correct option text
+      const wrap=document.createElement('div');
+      wrap.style.display='flex';wrap.style.flexDirection='column';wrap.style.alignItems='flex-start';
+      const existingContent=Array.from(optEls[i].childNodes);
+      const inner=document.createElement('div');
+      existingContent.forEach(n=>inner.appendChild(n));
+      wrap.appendChild(inner);
+      const exBtn=document.createElement('button');
+      exBtn.className='example-btn';
+      exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
+      exBtn.onclick=e=>{e.stopPropagation();showExample(item,exBtn,wrap);};
+      wrap.appendChild(exBtn);
+      optEls[i].appendChild(wrap);
+    }
+    else if(i===idx&&!isRight){optEls[i].classList.add('wrong');}
+  }
+  document.getElementById('nxt').style.display='block';
+}
+
+
+
+
+function showExample(item,btn,wrap){
+  btn.remove();
+  const panel=document.createElement('div');
+  panel.className='example-panel';
+  const sentence=item.e||'No example available for this word.';
+  // Highlight the word in the sentence
+  const highlighted=sentence.replace(
+    new RegExp(`\\b(${item.w})\\b`,'gi'),
+    `<em>$1</em>`
+  );
+  const firstWords=item.d.split(' ').slice(0,5).join(' ');
+  const tip=`Memory hook: link "${item.w}" to the idea of "${firstWords}…"`;
+  panel.innerHTML=`<div class="ex-sentence">${highlighted}</div><div class="ex-tip">💡 ${tip}</div>`;
+  wrap.appendChild(panel);
+}
+
+
+
+function nextQ(){answered=false;current++;render();}
+
+function renderResult(app){
+  const pct=Math.round(score/queue.length*100);
+  const msg=pct>=90?'Excellent work. You know this material.':pct>=70?'Good result. Brush up on the words below and you\'ll be ready.':pct>=50?'A decent start. Go through the words below and run the quiz again to reinforce them.':'More review needed. Work through the list below, then retake the quiz.';
+  const rev=wrong.length?`<div class="review-section">
+    <div class="review-header">Study these ${wrong.length} word${wrong.length>1?'s':''} before your final</div>
+    ${wrong.map(w=>`<div class="review-item"><div class="review-word">${w.w}</div><div class="review-def">${w.d}</div></div>`).join('')}
+  </div>`:`<div style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--correct);margin-top:1rem">Perfect score — nothing to review.</div>`;
+  app.innerHTML=`<div class="qcard result">
+    <div class="big-score">${score}/${queue.length}</div>
+    <div class="result-pct">${pct}% correct</div>
+    <div class="result-msg">${msg}</div>
+    <div class="result-btns">
+      <button class="rbtn primary" onclick="startSession()">Try Again</button>
+      ${wrong.length?`<button class="rbtn" onclick="retakeWrong()">Drill Missed Words</button>`:''}
+      <button class="rbtn" onclick="openGlossary()">See All Words</button>
+    </div>
+    ${rev}
+  </div>`;
+}
+
+function retakeWrong(){queue=shuffle([...wrong]);current=0;score=0;answered=false;wrong=[];render();}
+
+function renderFlash(app){
+  if(!pool.length){app.innerHTML='<div class="qcard" style="text-align:center;padding:2rem;color:var(--muted)">No words in this selection.</div>';return;}
+  if(flashIdx>=pool.length)flashIdx=0;
+  const item=pool[flashIdx];
+  const stateClass=flashState===0?'':flashState===1?' flipped':' sentence';
+  const stateLabel=flashState===0?'Word':flashState===1?'Definition':'Example Sentence';
+  let cardBody;
+  if(flashState===0){
+    cardBody=`<div class="flash-word">${item.w}</div>`;
+  } else if(flashState===1){
+    cardBody=`<div class="flash-def">${item.d}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
+  } else {
+    const sentence=(item.e||'No example available.').replace(
+      new RegExp(`\\b(${item.w})\\b`,'gi'),
+      `<em>$1</em>`
+    );
+    cardBody=`<div class="flash-sentence">${sentence}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
+  }
+  app.innerHTML=`
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Lesson</div><div class="stat-val">${item.l}</div></div>
+    </div>
+    <div class="flash-card${stateClass}" onclick="flipCard()">
+      <div class="flash-label">${stateLabel}</div>
+      ${cardBody}
+    </div>
+    <div class="flash-nav">
+      <button class="fnav-btn" onclick="flashNav(-1)">← Back</button>
+      <button class="fnav-toggle${flashShuffled?' on':''}" onclick="toggleFlashShuffle()">
+        <span>${flashShuffled?'⇄ Shuffled':'↕ Ordered'}</span>
+        <span class="toggle-label">${flashShuffled?'click for order':'click to shuffle'}</span>
+      </button>
+      <button class="fnav-btn" onclick="flashNav(1)">Forward →</button>
+    </div>
+    <div class="kbd-hint" style="margin-top:10px;">
+      <span><kbd>←</kbd><kbd>→</kbd> navigate</span>
+      <span><kbd>Space</kbd> to cycle</span>
+    </div>`;
+}
+
+function flipCard(){flashState=(flashState+1)%3;renderFlash(document.getElementById('app'));}
+
+function flashNav(d){
+  flashIdx=(flashIdx+d+pool.length)%pool.length;
+  flashState=0;
+  renderFlash(document.getElementById('app'));
+}
+
+function toggleFlashShuffle(){
+  flashShuffled=!flashShuffled;
+  const currentWord=pool[flashIdx].w;
+  if(flashShuffled){
+    pool=shuffle([...orderedPool]);
+  } else {
+    pool=[...orderedPool];
+  }
+  // Stay on same word after toggle
+  const newIdx=pool.findIndex(x=>x.w===currentWord);
+  flashIdx=newIdx>=0?newIdx:0;
+  flashState=0;
+  renderFlash(document.getElementById('app'));
+}
+
+function setTheme(t){
+  document.body.classList.toggle('light', t==='light');
+  localStorage.setItem('vocab_theme', t);
+  document.getElementById('theme-icon').textContent = t==='light' ? '☀️' : '🌙';
+}
+
+let glossaryObserver=null;
+
+function openGlossary(){
+  const overlay=document.getElementById('glossary-overlay');
+  const body=document.getElementById('glossary-body');
+  const countEl=document.getElementById('glossary-count');
+
+  countEl.textContent=`${ALL.length} words · ${Object.keys(LESSON_NAMES).length} lessons`;
+
+  body.innerHTML=Object.entries(LESSON_NAMES).map(([num,name])=>{
+    const words=ALL.filter(x=>x.l===parseInt(num));
+    const entries=words.map(w=>`
+      <div class="glossary-entry">
+        <div class="glossary-word">${w.w}</div>
+        <div class="glossary-def">${w.d}</div>
+      </div>`).join('');
+    return `<div class="glossary-lesson" id="gl-lesson-${num}" data-lesson="${num}">
+      <div class="glossary-lesson-header" id="gl-header-${num}">
+        <span class="glossary-lesson-num">Lesson ${num}</span>
+        <span class="glossary-lesson-name">${name}</span>
+      </div>
+      <div class="glossary-grid">${entries}</div>
+    </div>`;
+  }).join('');
+
+  overlay.classList.add('open');
+  overlay.scrollTop=0;
+  document.body.style.overflow='hidden';
+
+  if(glossaryObserver) glossaryObserver.disconnect();
+  glossaryObserver=new IntersectionObserver((entries)=>{
+    let best=null,bestTop=Infinity;
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const top=e.boundingClientRect.top;
+        if(top<bestTop){bestTop=top;best=e.target;}
+      }
+    });
+  },{root:overlay,threshold:0.15});
+
+  document.querySelectorAll('.glossary-lesson').forEach(el=>glossaryObserver.observe(el));
+}
+
+function smoothScrollOverlay(overlay, toY, duration){
+  const startY=overlay.scrollTop;
+  const diff=toY-startY;
+  if(Math.abs(diff)<1) return;
+  const startTime=performance.now();
+  function step(now){
+    const t=Math.min((now-startTime)/duration,1);
+    const ease=t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+    overlay.scrollTop=startY+diff*ease;
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function jumpToLesson(num){
+  const overlay=document.getElementById('glossary-overlay');
+  const target=document.getElementById('gl-lesson-'+num);
+  const header=document.getElementById('gl-header-'+num);
+  if(!target||!overlay) return;
+
+  const targetTop=target.getBoundingClientRect().top;
+  const overlayTop=overlay.getBoundingClientRect().top;
+  const destination=overlay.scrollTop+targetTop-overlayTop-48;
+  smoothScrollOverlay(overlay,Math.max(0,destination),520);
+
+  setTimeout(()=>{
+    header.classList.remove('flash');
+    void header.offsetWidth;
+    header.classList.add('flash');
+    setTimeout(()=>header.classList.remove('flash'),700);
+  },380);
+
+}
+
+function closeGlossary(){
+  document.getElementById('glossary-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  if(glossaryObserver){glossaryObserver.disconnect();glossaryObserver=null;}
+}
+
+buildLessonRow();
+startSession();
+setTheme(localStorage.getItem('vocab_theme')||'dark');
+
+document.addEventListener('keydown', e => {
+  const key = e.key.toUpperCase();
+  if(mode === 'quiz') {
+    // A/B/C/D to pick an answer
+    const idx = ['A','B','C','D'].indexOf(key);
+    if(idx !== -1) {
+      const btn = document.getElementById('opt-' + idx);
+      if(btn && !btn.classList.contains('disabled')) btn.click();
+      return;
+    }
+    // Space or Enter to advance
+    if((key === ' ' || e.key === 'Enter') && answered) {
+      e.preventDefault();
+      const nxt = document.getElementById('nxt');
+      if(nxt && nxt.style.display !== 'none') nxt.click();
+    }
+  }
+  if(mode === 'flash') {
+    if(key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    if(e.key === 'ArrowLeft')  flashNav(-1);
+    if(e.key === 'ArrowRight') flashNav(1);
+  }
+});
+
+// ─── Firebase Tracking ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDadRa4vIG8aKeKSCm5wq5lCRm5G_c9N3U",
+  authDomain: "vocabulary-study-tool.firebaseapp.com",
+  projectId: "vocabulary-study-tool",
+  storageBucket: "vocabulary-study-tool.firebasestorage.app",
+  messagingSenderId: "913103862395",
+  appId: "1:913103862395:web:80676232783593673cc0de",
+  measurementId: "G-788BBW5E0T"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let fbUser = null;
+let minuteTimer = null;
+
+auth.signInAnonymously().then(async result => {
+  fbUser = result.user;
+  const uid = fbUser.uid;
+  const userRef = db.collection('users').doc(uid);
+  const statsRef = db.collection('stats').doc('global');
+  const snap = await userRef.get();
+
+  if (!snap.exists) {
+    // New user — assign a number atomically
+    await db.runTransaction(async t => {
+      const statsSnap = await t.get(statsRef);
+      const count = statsSnap.exists ? (statsSnap.data().totalUsers || 0) : 0;
+      const userNumber = count + 1;
+      t.set(statsRef, {
+        totalUsers: userNumber,
+        totalTime: 0,
+        totalQuestionsAnswered: 0,
+        totalCorrectAnswers: 0
+      }, { merge: true });
+      t.set(userRef, {
+        userNumber,
+        firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        totalTime: 0,
+        totalQuestionsAnswered: 0,
+        totalCorrectAnswers: 0,
+        sessionCount: 1
+      });
+    });
+  } else {
+    await userRef.update({
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+      sessionCount: firebase.firestore.FieldValue.increment(1)
+    });
+  }
+  startMinuteTimer();
+}).catch(err => console.warn('Firebase auth error:', err));
+
+// Increments totalTime by 1 (minute) every 60 seconds while tab is visible
+function startMinuteTimer() {
+  if (minuteTimer) clearInterval(minuteTimer);
+  minuteTimer = setInterval(() => {
+    if (!fbUser) return;
+    const inc = firebase.firestore.FieldValue.increment(1);
+    db.collection('users').doc(fbUser.uid).update({ totalTime: inc });
+    db.collection('stats').doc('global').update({ totalTime: inc });
+  }, 60000);
+}
+
+// totalTime is stored as total minutes. To display: Math.floor(t/60) + " Hours, " + (t%60) + " Minutes"
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    clearInterval(minuteTimer);
+    minuteTimer = null;
+  } else {
+    startMinuteTimer();
+  }
+});
+window.addEventListener('beforeunload', () => clearInterval(minuteTimer));
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>
