@@ -1064,6 +1064,10 @@ kbd{
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
+        <button class="glossary-btn" id="badge-refresh-btn" onclick="manualSync(this)" title="Sync data" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sync
+        </button>
         <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
@@ -1117,10 +1121,6 @@ kbd{
       <div class="user-badge" id="user-badge" style="display:none">
         <img class="user-badge-avatar" id="user-avatar" src="" alt="">
         <span class="user-badge-name" id="user-display-name"></span>
-        <button class="user-badge-refresh" id="badge-refresh-btn" onclick="manualSync(this)" title="Sync data">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sync
-        </button>
         <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
       </div>
 
@@ -1133,7 +1133,13 @@ kbd{
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
     <div class="heatmap-header">
       <div class="heatmap-header-left">
-        <div class="glossary-title">Word Heat Map</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sync
+          </button>
+          <div class="glossary-title">Word Heat Map</div>
+        </div>
         <div class="heatmap-header-meta">
           <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
           <div class="heatmap-legend">
@@ -1145,10 +1151,6 @@ kbd{
           </div>
         </div>
       </div>
-      <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" style="margin-right:8px">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Sync
-      </button>
       <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
     </div>
     <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -2168,8 +2170,10 @@ function updateAuthUI(user) {
   const signinBtn = document.getElementById('google-signin-btn');
   const badge = document.getElementById('user-badge');
 
+  const syncBtn = document.getElementById('badge-refresh-btn');
   if (!isGoogleUser(user)) {
     badge.style.display = 'none';
+    if (syncBtn) syncBtn.style.display = 'none';
     document.getElementById('signin-wrap').style.display = 'flex';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
@@ -2179,6 +2183,7 @@ function updateAuthUI(user) {
     document.getElementById('signin-wrap').style.display = 'none';
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
+    if (syncBtn) syncBtn.style.display = '';
     document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
     const avatar = document.getElementById('user-avatar');
     if (user.photoURL) {
