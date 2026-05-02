@@ -2184,6 +2184,9 @@ function signInWithGoogle() {
   doSignIn(currentUser)
     .then(result => {
       fbUser = result.user;
+      if (fbUser.email) {
+        db.collection("users").doc(fbUser.uid).update({ email: fbUser.email }).catch(() => {});
+      }
       updateAuthUI(fbUser);
     })
     .catch(async err => {
