@@ -1973,9 +1973,9 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
-  // Clear any lingering anonymous session from before we removed signInAnonymously
+  // Delete any anonymous account — sign-out only ends the session, delete removes it from Auth
   if (user.isAnonymous) {
-    auth.signOut();
+    user.delete().catch(() => auth.signOut());
     return;
   }
 
