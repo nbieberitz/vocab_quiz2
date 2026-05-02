@@ -13,6 +13,11 @@
 :root{
   --bg:#05080f;
   --surface:#0b1120;
+  --hm-unseen:#1a2035;
+  --hm-low:#7a1a28;
+  --hm-mid:#7a5a00;
+  --hm-good:#2a6b3a;
+  --hm-great:#006b5a;
   --surface2:#111a2e;
   --border:rgba(0,200,255,0.08);
   --border2:rgba(0,200,255,0.22);
@@ -48,6 +53,11 @@ body.light{
   --wrong-border:rgba(217,58,87,0.3);
   --glow:rgba(0,119,204,0.1);
   --glow2:rgba(212,135,10,0.1);
+  --hm-unseen:#dce4f0;
+  --hm-low:#f5b8c0;
+  --hm-mid:#f5dfa0;
+  --hm-good:#a8ddb8;
+  --hm-great:#7dd4c0;
 }
 body.light::before{
   background-image:radial-gradient(circle,rgba(0,120,200,0.06) 1px,transparent 1px);
@@ -117,6 +127,68 @@ body.light .flash-card::before{
 }
 .opt-data-btn svg{opacity:0.5}
 
+/* Google sign-in button */
+.google-signin-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.07em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+  width:fit-content;
+}
+.google-signin-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  box-shadow:0 0 14px var(--glow);
+}
+.google-signin-btn:disabled{
+  opacity:0.45;cursor:not-allowed;
+  border-color:var(--border);
+}
+.google-signin-btn svg{flex-shrink:0;}
+
+/* Signed-in user badge */
+.user-badge{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 12px 5px 8px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  width:fit-content;
+}
+.user-badge-avatar{
+  width:22px;height:22px;
+  border-radius:50%;
+  object-fit:cover;
+  border:1px solid var(--border2);
+  flex-shrink:0;
+}
+.user-badge-name{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.06em;
+  color:var(--text);
+  opacity:0.85;
+  max-width:120px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-badge-signout{
+  background:transparent;border:none;
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.07em;
+  text-transform:uppercase;
+  color:var(--muted);
+  cursor:pointer;padding:0;
+  transition:color .15s;
+  flex-shrink:0;
+}
+.user-badge-signout:hover{color:var(--wrong);}
+
 /* Name modal */
 .name-modal-overlay{
   position:fixed;inset:0;
@@ -150,7 +222,8 @@ body.light .flash-card::before{
 .name-modal-desc{
   font-family:'DM Mono',monospace;
   font-size:11px;letter-spacing:0.06em;
-  color:var(--muted);
+  color:var(--text);
+  opacity:0.7;
   line-height:1.7;
 }
 .name-modal-input{
@@ -202,7 +275,110 @@ body.light .flash-card::before{
   padding:4px 0 2px;
 }
 
-/* Theme toggle button */
+.adaptive-word-badge{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:20px;
+  font-family:'DM Mono',monospace;
+  font-size:9px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.9);
+}
+body.light .adaptive-word-badge{color:rgba(0,0,0,0.7);}
+
+.heatmap-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  padding:2rem 32px 1.5rem;
+  gap:1rem;
+}
+.heatmap-header-left{
+  display:flex;flex-direction:column;gap:0.6rem;
+}
+.heatmap-header-meta{
+  display:flex;align-items:center;gap:2rem;flex-wrap:wrap;
+}
+.heatmap-legend{
+  display:flex;align-items:center;gap:12px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.07em;text-transform:uppercase;color:var(--text);opacity:0.7;
+}
+.heatmap-legend-item{display:flex;align-items:center;gap:5px;}
+.heatmap-legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.heatmap-lesson-labels{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:8px;
+  padding:0 32px 4px;
+}
+.heatmap-grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:8px;
+  padding:0 32px 32px;
+  overflow-y:auto;
+}
+.heatmap-cell{
+  aspect-ratio:2/1;
+  border-radius:8px;
+  background:var(--hm-unseen);
+  cursor:pointer;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s, box-shadow .1s;
+  overflow:hidden;
+}
+.heatmap-cell:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(0,0,0,0.4);z-index:2;}
+.heatmap-cell-label{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.05em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.9);
+  text-align:center;
+  padding:4px 6px;
+  line-height:1.3;
+  pointer-events:none;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+}
+body.light .heatmap-cell-label{color:rgba(0,0,0,0.7);}
+.heatmap-cell-tooltip{
+  position:absolute;
+  bottom:calc(100% + 8px);
+  left:50%;transform:translateX(-50%);
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:8px 12px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.05em;
+  color:var(--text);
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s;
+  z-index:10;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+  min-width:160px;
+  text-align:center;
+}
+.heatmap-cell:hover .heatmap-cell-tooltip{opacity:1;}
+.heatmap-row-label{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+  grid-column:1/-1;
+  padding-top:12px;
+  padding-bottom:4px;
+  border-top:1px solid var(--border);
+  margin-top:4px;
+}
+.heatmap-row-label:first-child{border-top:none;padding-top:0;margin-top:0;}
+
 .theme-toggle{
   display:flex;align-items:center;justify-content:center;
   width:38px;height:38px;
@@ -331,7 +507,7 @@ body::after{
 
 /* Direction toggle */
 .dir-row{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem}
-.dir-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.dir-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);opacity:0.75;white-space:nowrap}
 .dir-toggle{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:40px;padding:3px;gap:2px;flex:1}
 .dir-btn{
   flex:1;padding:6px 10px;
@@ -351,7 +527,32 @@ body::after{
 }
 
 /* Lesson pills */
-.lesson-row{display:flex;gap:7px;margin-bottom:1.75rem;flex-wrap:wrap}
+.lesson-row{display:flex;align-items:center;gap:10px;margin-bottom:1.75rem;flex-wrap:wrap}
+.lesson-section{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.lesson-section-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--text);
+  opacity:0.75;
+  white-space:nowrap;
+  padding-right:2px;
+}
+.lesson-section-sep{
+  width:1px;height:22px;
+  background:var(--border2);
+  flex-shrink:0;
+  align-self:center;
+  opacity:0.6;
+}
+.adaptive-hint{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.07em;
+  color:var(--text);
+  opacity:0.6;
+  white-space:nowrap;
+  font-style:italic;
+}
 .lesson-pill{
   padding:6px 13px;
   border:1px solid var(--border2);
@@ -369,6 +570,12 @@ body::after{
   background:rgba(0,212,255,0.07);
   color:var(--accent);
   box-shadow:0 0 10px rgba(0,212,255,0.15);
+}
+.lesson-pill.adaptive-active{
+  border-color:var(--accent2);
+  background:rgba(245,166,35,0.09);
+  color:var(--accent2);
+  box-shadow:0 0 10px rgba(245,166,35,0.18);
 }
 
 /* Stats */
@@ -764,6 +971,8 @@ body::after{
   overflow-y:scroll;
   overflow-x:hidden;
   animation:fadeUp .25s ease both;
+  opacity:1;
+  transition:opacity .25s;
 }
 .glossary-overlay.open{display:block;}
 .glossary-layout{
@@ -818,6 +1027,32 @@ body::after{
 .glossary-back:hover{
   background:rgba(0,212,255,0.08);
   box-shadow:0 0 18px var(--glow);
+}
+/* Heatmap close button — mirrors .glossary-back */
+.glossary-close{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 20px;
+  border:1px solid var(--border2);
+  border-radius:30px;
+  background:var(--surface);
+  color:var(--accent);
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+  flex-shrink:0;
+}
+.glossary-close:hover{
+  background:rgba(0,212,255,0.08);
+  box-shadow:0 0 18px var(--glow);
+}
+/* Heatmap subtitle — mirrors .glossary-count */
+.glossary-sub{
+  font-family:'DM Mono',monospace;
+  font-size:12px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--text);
+  opacity:0.5;
 }
 .glossary-count{
   font-family:'DM Mono',monospace;
@@ -920,9 +1155,57 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v2.1</span>
+      <span class="version-tag">v2.1.5</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
+            <rect x="1" y="6.3" width="12" height="1.4" rx="0.7" fill="currentColor"/>
+            <rect x="1" y="10.6" width="8" height="1.4" rx="0.7" fill="currentColor"/>
+          </svg>
+          All Words
+        </button>
+        <button class="glossary-btn" onclick="openHeatmap()" title="Word knowledge heatmap">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.4"/>
+            <rect x="5.25" y="1" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.7"/>
+            <rect x="9.5" y="1" width="3.5" height="3.5" rx="0.6" fill="currentColor"/>
+            <rect x="1" y="5.25" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.7"/>
+            <rect x="5.25" y="5.25" width="3.5" height="3.5" rx="0.6" fill="currentColor"/>
+            <rect x="9.5" y="5.25" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.4"/>
+            <rect x="1" y="9.5" width="3.5" height="3.5" rx="0.6" fill="currentColor"/>
+            <rect x="5.25" y="9.5" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.4"/>
+            <rect x="9.5" y="9.5" width="3.5" height="3.5" rx="0.6" fill="currentColor" opacity="0.7"/>
+          </svg>
+          Heat Map
+        </button>
+        <div class="mode-toggle">
+          <button class="mode-btn" id="mode-quiz" onclick="setMode('quiz')">Practice</button>
+          <button class="mode-btn" id="mode-flash" onclick="setMode('flash')">Flashcards</button>
+        </div>
+        <div class="theme-toggle" onclick="setTheme(document.body.classList.contains('light')?'dark':'light')" title="Toggle theme" style="cursor:pointer">
+          <span id="theme-icon">🌙</span>
+        </div>
+      </div>
+      <!-- Google sign-in button (shown when anonymous) -->
+      <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+          <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        Save Progress
+      </button>
+      <!-- User badge (shown when signed in with Google) -->
+      <div class="user-badge" id="user-badge" style="display:none">
+        <img class="user-badge-avatar" id="user-avatar" src="" alt="">
+        <span class="user-badge-name" id="user-display-name"></span>
+        <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
+      </div>
+      <!-- Optional name submission (anon users without a display name) -->
       <button class="opt-data-btn" onclick="openNameModal()" style="display:none">
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
@@ -930,23 +1213,6 @@ kbd{
         </svg>
         Send optional data
       </button>
-      <div style="display:flex;align-items:center;gap:8px">
-      <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
-          <rect x="1" y="6.3" width="12" height="1.4" rx="0.7" fill="currentColor"/>
-          <rect x="1" y="10.6" width="8" height="1.4" rx="0.7" fill="currentColor"/>
-        </svg>
-        All Words
-      </button>
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="mode-quiz" onclick="setMode('quiz')">Practice</button>
-        <button class="mode-btn" id="mode-flash" onclick="setMode('flash')">Flashcards</button>
-      </div>
-      <div class="theme-toggle" onclick="setTheme(document.body.classList.contains('light')?'dark':'light')" title="Toggle theme" style="cursor:pointer">
-        <span id="theme-icon">🌙</span>
-      </div>
-      </div>
     </div>
   </div>
 
@@ -955,13 +1221,34 @@ kbd{
     <div class="name-modal">
       <div class="name-modal-title">OPTIONAL <em>DATA</em></div>
       <p class="name-modal-desc">This allows minor optional data to be sent to the developer to help improve the website if needed.</p>
-      <input class="name-modal-input" id="name-modal-input" type="text" placeholder="Your name" maxlength="60" oninput="onNameInput()">
+      <input class="name-modal-input" id="name-modal-input" type="text" placeholder="Your name" maxlength="60" oninput="onNameInput()" onkeydown="if(event.key==='Enter'&&!document.getElementById('name-modal-submit').disabled)submitName()">
       <div id="name-modal-thanks" class="name-modal-thanks" style="display:none">✓ Thanks! Your name has been saved.</div>
       <div class="name-modal-actions" id="name-modal-actions">
         <button class="name-modal-cancel" onclick="closeNameModal()">Cancel</button>
         <button class="name-modal-submit" id="name-modal-submit" onclick="submitName()" disabled>Submit</button>
       </div>
     </div>
+  </div>
+
+  <!-- Heatmap overlay -->
+  <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
+    <div class="heatmap-header">
+      <div class="heatmap-header-left">
+        <div class="glossary-title">Word Heat Map</div>
+        <div class="heatmap-header-meta">
+          <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
+          <div class="heatmap-legend">
+            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-unseen)"></div>Unseen</div>
+            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-low)"></div>&lt;50%</div>
+            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-mid)"></div>50–74%</div>
+            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-good)"></div>75–89%</div>
+            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-great)"></div>90%+</div>
+          </div>
+        </div>
+      </div>
+      <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
+    </div>
+    <div class="heatmap-grid" id="heatmap-grid"></div>
   </div>
 
   <!-- Glossary overlay -->
@@ -981,12 +1268,19 @@ kbd{
 
   </div>
   <div class="lesson-row" id="lesson-row"></div>
+  <div class="dir-row" id="order-row">
+    <span class="dir-label">Order</span>
+    <div class="dir-toggle">
+      <button class="dir-btn" id="order-ordered" onclick="setOrder('ordered')">In Order</button>
+      <button class="dir-btn active" id="order-random" onclick="setOrder('random')">Randomized</button>
+    </div>
+  </div>
   <div class="dir-row" id="dir-row">
     <span class="dir-label">Mode</span>
     <div class="dir-toggle">
-      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Word → Definition</button>
-      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Definition → Word</button>
-      <button class="dir-btn" id="dir-random" onclick="setDir('random')">Random</button>
+      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Define the Word</button>
+      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Match the Definition</button>
+      <button class="dir-btn" id="dir-random" onclick="setDir('random')">Mix of Both</button>
     </div>
   </div>
   <div id="app"></div>
@@ -1154,7 +1448,11 @@ const ALL=[
 ];
 
 const LETTERS=['A','B','C','D'];
-let mode='quiz',dir='word',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
+let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
+// Adaptive mode state
+let adaptiveCount=0, adaptiveScore=0, adaptiveStreak=0, adaptiveBestStreak=0;
+let adaptiveRecentWords=[], adaptiveNextReview=Math.floor(Math.random()*3)+4;
+let wordStats = {}; // { word: { seen: N, correct: N } } — must be declared before selectLesson('adaptive') runs
 
 function setDir(d){
   dir=d;
@@ -1164,13 +1462,54 @@ function setDir(d){
   startSession();
 }
 
+function setOrder(o){
+  quizOrder=o;
+  document.getElementById('order-ordered').className='dir-btn'+(o==='ordered'?' active':'');
+  document.getElementById('order-random').className='dir-btn'+(o==='random'?' active':'');
+  startSession();
+}
+
 function buildLessonRow(){
   const row=document.getElementById('lesson-row');
-  const pills=[{id:'all',label:'All 150'},...Array.from({length:15},(_,i)=>({id:i+1,label:`L${i+1}`}))];
-  row.innerHTML=pills.map(l=>`<button class="lesson-pill${l.id===selectedLesson?' active':''}" onclick="selectLesson('${l.id}')">${l.label}</button>`).join('');
+  const allActive=mode==='quiz'&&selectedLesson==='all';
+  const adaptiveActive=mode==='adaptive';
+  const lessonPills=Array.from({length:15},(_,i)=>({id:i+1,label:`L${i+1}`}));
+  row.innerHTML=`
+    <div class="lesson-section">
+      <span class="lesson-section-label">Practice</span>
+      <button class="lesson-pill${adaptiveActive?' adaptive-active':''}" onclick="selectLesson('adaptive')">Adaptive</button>
+      <button class="lesson-pill${allActive?' active':''}" onclick="selectLesson('all')">All 150</button>
+      ${adaptiveActive?'<span class="adaptive-hint">focused by Word Heat Map</span>':allActive?'<span class="adaptive-hint">runs through all 150 words once</span>':''}
+    </div>
+    <div class="lesson-section-sep"></div>
+    <div class="lesson-section">
+      <span class="lesson-section-label">By Lesson</span>
+      ${lessonPills.map(l=>`<button class="lesson-pill${(!adaptiveActive&&mode==='quiz'&&selectedLesson===l.id)?' active':''}" onclick="selectLesson('${l.id}')">${l.label}</button>`).join('')}
+    </div>`;
 }
 
 function selectLesson(id){
+  if(id==='adaptive'){
+    selectedLesson='all';
+    if(mode!=='adaptive'){
+      mode='adaptive';
+      adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;
+      adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;
+      document.getElementById('order-row').style.display='none';
+    }
+    document.getElementById('mode-quiz').className='mode-btn active';
+    document.getElementById('mode-flash').className='mode-btn';
+    buildLessonRow();
+    startSession();
+    return;
+  }
+  // Switching away from adaptive — return to quiz mode
+  if(mode==='adaptive'){
+    mode='quiz';
+    document.getElementById('order-row').style.display='flex';
+  }
+  document.getElementById('mode-quiz').className='mode-btn active';
+  document.getElementById('mode-flash').className='mode-btn';
   selectedLesson=id==='all'?'all':parseInt(id);
   buildLessonRow();startSession();
 }
@@ -1178,18 +1517,58 @@ function selectLesson(id){
 function getPool(){return selectedLesson==='all'?[...ALL]:ALL.filter(x=>x.l===selectedLesson);}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
+function nextAdaptiveWord(){
+  // Every adaptiveNextReview questions, insert a high-accuracy review word
+  const isReviewSlot = adaptiveCount > 0 && adaptiveCount % adaptiveNextReview === 0;
+  if(isReviewSlot){
+    adaptiveNextReview = Math.floor(Math.random()*3)+4;
+    const reviewPool = ALL.filter(w=>{
+      if(adaptiveRecentWords.includes(w.w)) return false;
+      const s = wordStats[w.w];
+      return s && s.seen >= 2 && (s.correct/s.seen) >= 0.75;
+    });
+    if(reviewPool.length > 0) return reviewPool[Math.floor(Math.random()*reviewPool.length)];
+  }
+
+  // Build weighted pool — exclude last 12 words to spread selection out
+  const candidates = ALL.filter(item => !adaptiveRecentWords.includes(item.w));
+  const weights = candidates.map(item => {
+    const s = wordStats[item.w];
+    if(!s || s.seen === 0) return 3;      // unseen
+    const p = s.correct / s.seen;
+    if(p < 0.5)  return 4;               // struggling — moderately prioritized
+    if(p < 0.75) return 2.5;             // needs work
+    if(p < 0.9)  return 1;              // decent
+    return 0.4;                          // mastered — still appears occasionally
+  });
+
+  // Proper weighted random — no array slot inflation
+  const total = weights.reduce((a,b) => a+b, 0);
+  let rand = Math.random() * total;
+  for(let i = 0; i < candidates.length; i++){
+    rand -= weights[i];
+    if(rand <= 0) return candidates[i];
+  }
+  return candidates[candidates.length-1];
+}
+
 function setMode(m){
   mode=m;
   document.getElementById('mode-quiz').className='mode-btn'+(m==='quiz'?' active':'');
   document.getElementById('mode-flash').className='mode-btn'+(m==='flash'?' active':'');
-  document.getElementById('dir-row').style.display=m==='quiz'?'flex':'none';
+  document.getElementById('dir-row').style.display=(m==='quiz'||m==='adaptive')?'flex':'none';
+  document.getElementById('order-row').style.display=m==='quiz'?'flex':'none';
+  document.getElementById('lesson-row').style.display=m==='flash'?'none':'flex';
+  if(m==='adaptive'){adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;}
+  if(m!=='adaptive') selectedLesson='all'; // reset lesson selection when switching modes
+  buildLessonRow();
   startSession();
 }
 
 function startSession(){
   orderedPool=getPool();
   pool=flashShuffled?shuffle([...orderedPool]):[...orderedPool];
-  queue=shuffle([...orderedPool]);
+  queue=quizOrder==='ordered'?[...orderedPool]:shuffle([...orderedPool]);
   current=0;score=0;answered=false;wrong=[];flashIdx=0;flashState=0;
   render();
 }
@@ -1197,19 +1576,20 @@ function startSession(){
 function makeOptions(item,showWord){
   const p=getPool();
   if(showWord){
-    // show definition, pick from words
+    // show definition, pick correct word from wrong word choices
     const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
     return shuffle([item,...w3]);
   } else {
-    // show word, pick from definitions
+    // show word, pick correct definition from wrong definition choices
     const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
-    return shuffle([item,...w3]);
+    return shuffle([{...item,_isCorrect:true},...w3.map(x=>({...x,_isCorrect:false}))]);
   }
 }
 
 function render(){
   const app=document.getElementById('app');
   if(mode==='flash'){renderFlash(app);return;}
+  if(mode==='adaptive'){renderAdaptive(app);return;}
   if(current>=queue.length){renderResult(app);return;}
   const item=queue[current];
   // determine direction for this question
@@ -1258,8 +1638,14 @@ function pick(idx,chosen,correct){
   if(answered)return;
   answered=true;
   const isRight=chosen===correct;
-  if(isRight){score++;}else{wrong.push(queue[current]);}
-  trackAnswer(isRight);
+  if(isRight){
+    score++;
+    if(mode==='adaptive'){adaptiveScore++;adaptiveStreak++;if(adaptiveStreak>adaptiveBestStreak)adaptiveBestStreak=adaptiveStreak;}
+  } else {
+    wrong.push(queue[current]);
+    if(mode==='adaptive') adaptiveStreak=0;
+  }
+  trackAnswer(isRight, queue[current].w);
   const item=queue[current];
   const optEls=document.getElementById('opts').children;
   for(let i=0;i<optEls.length;i++){
@@ -1298,7 +1684,7 @@ function showExample(item,btn,wrap){
   const sentence=item.e||'No example available for this word.';
   // Highlight the word in the sentence
   const highlighted=sentence.replace(
-    new RegExp(`\\b(${item.w})\\b`,'gi'),
+    new RegExp(`\\b(${item.w}\\w*)`, 'gi'),
     `<em>$1</em>`
   );
   const firstWords=item.d.split(' ').slice(0,5).join(' ');
@@ -1309,7 +1695,62 @@ function showExample(item,btn,wrap){
 
 
 
-function nextQ(){answered=false;current++;render();}
+function renderAdaptive(app){
+  const item = nextAdaptiveWord();
+  // track recent words (avoid repeats in last 5)
+  adaptiveRecentWords.push(item.w);
+  if(adaptiveRecentWords.length > 12) adaptiveRecentWords.shift();
+  queue[current] = item; // store so pick() can reference it
+  const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
+  item._showDef = showDef;
+  const opts = shuffle(ALL.filter(x=>x.w!==item.w)).slice(0,3);
+  opts.push(item);
+  const shuffled = shuffle(opts);
+  const lname = `Lesson ${item.l} · ${LESSON_NAMES[item.l]}`;
+  const dirLabel = showDef?'Which word fits this definition?':'Select the correct definition:';
+  const prompt = showDef
+    ? `<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`
+    : `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
+  const optsHtml = shuffled.map((o,i)=>{
+    const label = showDef?o.w:o.d;
+    const safeLabel = label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeKey = (showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeCorrect = (showDef?item.w:item.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}','${safeCorrect}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
+  }).join('');
+  const accuracy = adaptiveCount > 0 ? Math.round(adaptiveScore/adaptiveCount*100) : 0;
+  const s = wordStats[item.w];
+  const wordPct = s && s.seen > 0 ? Math.round(s.correct/s.seen*100) : null;
+  const wordBadge = wordPct !== null
+    ? `<span class="adaptive-word-badge" style="background:${wordPct>=90?'var(--hm-great)':wordPct>=75?'var(--hm-good)':wordPct>=50?'var(--hm-mid)':'var(--hm-low)'}">${wordPct}% hist.</span>`
+    : `<span class="adaptive-word-badge" style="background:var(--hm-unseen);opacity:0.7">New</span>`;
+  app.innerHTML=`
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Questions</div><div class="stat-val">${adaptiveCount+1}</div></div>
+      <div class="stat"><div class="stat-label">Streak</div><div class="stat-val">${adaptiveStreak}<span style="font-size:12px;color:var(--muted)"> best ${adaptiveBestStreak}</span></div></div>
+      <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${accuracy}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
+    </div>
+    <div class="quiz-layout">
+      <div class="quiz-left qcard">
+        <div class="lesson-tag" style="display:flex;align-items:center;gap:8px">${lname} ${wordBadge}</div>
+        ${prompt}
+      </div>
+      <div class="quiz-right">
+        <div class="options" id="opts">${optsHtml}</div>
+        <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
+      </div>
+    </div>
+    <div class="kbd-hint">
+      <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span>
+      <span><kbd>Space</kbd> to advance</span>
+    </div>`;
+}
+
+function nextQ(){
+  answered=false;
+  if(mode==='adaptive'){adaptiveCount++;render();return;}
+  current++;render();
+}
 
 function renderResult(app){
   const pct=Math.round(score/queue.length*100);
@@ -1346,7 +1787,7 @@ function renderFlash(app){
     cardBody=`<div class="flash-def">${item.d}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
   } else {
     const sentence=(item.e||'No example available.').replace(
-      new RegExp(`\\b(${item.w})\\b`,'gi'),
+      new RegExp(`\\b(${item.w}\\w*)`, 'gi'),
       `<em>$1</em>`
     );
     cardBody=`<div class="flash-sentence">${sentence}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
@@ -1485,13 +1926,17 @@ function closeGlossary(){
   if(glossaryObserver){glossaryObserver.disconnect();glossaryObserver=null;}
 }
 
-buildLessonRow();
-startSession();
+selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
 
 document.addEventListener('keydown', e => {
+  if (document.getElementById('name-modal-overlay').classList.contains('open')) return;
+  if (document.getElementById('heatmap-overlay').style.display === 'block') {
+    if (e.key === 'Escape') closeHeatmap();
+    return;
+  }
   const key = e.key.toUpperCase();
-  if(mode === 'quiz') {
+  if(mode === 'quiz' || mode === 'adaptive') {
     // A/B/C/D to pick an answer
     const idx = ['A','B','C','D'].indexOf(key);
     if(idx !== -1) {
@@ -1512,6 +1957,76 @@ document.addEventListener('keydown', e => {
     if(e.key === 'ArrowRight') flashNav(1);
   }
 });
+
+// ─── Heat Map ────────────────────────────────────────────────────────────────
+function hmColor(stats) {
+  if (!stats || stats.seen === 0) return 'var(--hm-unseen)';
+  const pct = stats.correct / stats.seen;
+  if (pct < 0.5)  return 'var(--hm-low)';
+  if (pct < 0.75) return 'var(--hm-mid)';
+  if (pct < 0.9)  return 'var(--hm-good)';
+  return 'var(--hm-great)';
+}
+
+function openHeatmap() {
+  const overlay = document.getElementById('heatmap-overlay');
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = '';
+
+  // Group words by lesson
+  const byLesson = {};
+  ALL.forEach(item => {
+    if (!byLesson[item.l]) byLesson[item.l] = [];
+    byLesson[item.l].push(item);
+  });
+
+  const lessons = Object.keys(byLesson).map(Number).sort((a,b)=>a-b);
+  let seen = 0, total = 0;
+
+  lessons.forEach(l => {
+    // Lesson label spanning all 10 columns
+    const label = document.createElement('div');
+    label.className = 'heatmap-row-label';
+    label.textContent = `Lesson ${l}`;
+    grid.appendChild(label);
+
+    byLesson[l].forEach(item => {
+      const stats = wordStats[item.w] || { seen: 0, correct: 0 };
+      if (stats.seen > 0) seen++;
+      total++;
+      const pct = stats.seen > 0 ? Math.round((stats.correct / stats.seen) * 100) : null;
+
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.style.background = hmColor(stats);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'heatmap-cell-label';
+      lbl.textContent = item.w;
+
+      const tip = document.createElement('div');
+      tip.className = 'heatmap-cell-tooltip';
+      tip.innerHTML = `<strong>${item.w}</strong><br>${stats.seen === 0 ? 'Not yet seen' : `${pct}% correct (${stats.correct}/${stats.seen})`}`;
+
+      cell.appendChild(lbl);
+      cell.appendChild(tip);
+      grid.appendChild(cell);
+    });
+  });
+
+  document.getElementById('heatmap-sub').textContent =
+    `${seen} of ${total} words practiced`;
+
+  overlay.style.display = 'block';
+  requestAnimationFrame(() => overlay.style.opacity = '1');
+}
+
+function closeHeatmap() {
+  const overlay = document.getElementById('heatmap-overlay');
+  overlay.style.opacity = '0';
+  setTimeout(() => { overlay.style.display = 'none'; }, 250);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Optional Name Modal ──────────────────────────────────────────────────────
 function openNameModal() {
@@ -1577,6 +2092,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 let fbUser = null;
 let secondTimer = null;
@@ -1591,16 +2107,28 @@ function fmtHMS(s) {
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
 }
 
-auth.signInAnonymously().then(async result => {
-  fbUser = result.user;
-  const uid = fbUser.uid;
+// ── Auth state listener — handles both anon and Google users ──────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    // No session at all — sign in anonymously
+    auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
+    return;
+  }
+  fbUser = user;
+  await initUserDoc(user);
+  startSecondTimer();
+  updateAuthUI(user);
+});
+
+async function initUserDoc(user) {
+  const uid = user.uid;
   const userRef = db.collection("users").doc(uid);
   const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
   const statsSnap = await statsRef.get();
 
   if (!snap.exists) {
-    // New user — assign a number atomically
+    // Brand-new user (anon or Google first time) — assign a number
     await db.runTransaction(async t => {
       const ss = await t.get(statsRef);
       const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
@@ -1611,32 +2139,176 @@ auth.signInAnonymously().then(async result => {
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0
       }, { merge: true });
-      t.set(userRef, {
+      const userData = {
         userNumber,
         firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
         totalTime: "00:00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
-        sessionCount: 1
-      });
+        sessionCount: 1,
+        wordStats: wordStats  // carry over any stats from this session
+      };
+      if (!user.isAnonymous) {
+        userData.displayName = user.displayName || '';
+        userData.email = user.email || '';
+        userData.photoURL = user.photoURL || '';
+      }
+      t.set(userRef, userData);
     });
     localUserSeconds = 0;
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
-    document.querySelector('.opt-data-btn').style.display = '';  // new user, no name yet
+    if (user.isAnonymous) {
+      document.querySelector('.opt-data-btn').style.display = '';
+    }
   } else {
-    await userRef.update({
+    // Returning user — load their saved data
+    const savedStats = snap.data().wordStats || {};
+    // Merge current-session wordStats into saved (in case there were answers before login)
+    for (const [word, stat] of Object.entries(wordStats)) {
+      if (savedStats[word]) {
+        savedStats[word].seen += stat.seen;
+        savedStats[word].correct += stat.correct;
+      } else {
+        savedStats[word] = stat;
+      }
+    }
+    wordStats = savedStats;
+    const updateData = {
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-      sessionCount: firebase.firestore.FieldValue.increment(1)
-    });
+      sessionCount: firebase.firestore.FieldValue.increment(1),
+      wordStats: wordStats
+    };
+    if (!user.isAnonymous) {
+      updateData.displayName = user.displayName || snap.data().displayName || '';
+      updateData.photoURL = user.photoURL || snap.data().photoURL || '';
+    }
+    await userRef.update(updateData);
     localUserSeconds = parseHMS(snap.data().totalTime);
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
-    if (!snap.data().displayName) {
+    if (user.isAnonymous && !snap.data().displayName) {
       document.querySelector('.opt-data-btn').style.display = '';
     }
   }
-  startSecondTimer();
-}).catch(err => console.warn("Firebase auth error:", err));
+}
+
+// ── Auth UI helpers ───────────────────────────────────────────────────────────
+function updateAuthUI(user) {
+  const signinBtn = document.getElementById('google-signin-btn');
+  const badge = document.getElementById('user-badge');
+  const optBtn = document.querySelector('.opt-data-btn');
+
+  if (!user || user.isAnonymous) {
+    badge.style.display = 'none';
+    signinBtn.style.display = '';
+    signinBtn.disabled = false;
+    signinBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+      <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>Save Progress`;
+  } else {
+    // Google user
+    signinBtn.style.display = 'none';
+    optBtn.style.display = 'none';
+    badge.style.display = 'flex';
+    document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
+    const avatar = document.getElementById('user-avatar');
+    if (user.photoURL) {
+      avatar.src = user.photoURL;
+      avatar.style.display = '';
+    } else {
+      avatar.style.display = 'none';
+    }
+  }
+}
+
+// ── Google sign-in ────────────────────────────────────────────────────────────
+function signInWithGoogle() {
+  const btn = document.getElementById('google-signin-btn');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  const currentUser = auth.currentUser;
+  if (currentUser && currentUser.isAnonymous) {
+    // Upgrade anon → Google (preserves UID and existing Firestore doc)
+    currentUser.linkWithPopup(googleProvider)
+      .then(result => {
+        fbUser = result.user;
+        // Update Firestore doc with Google profile info
+        db.collection("users").doc(fbUser.uid).update({
+          displayName: fbUser.displayName || '',
+          email: fbUser.email || '',
+          photoURL: fbUser.photoURL || ''
+        });
+        document.querySelector('.opt-data-btn').style.display = 'none';
+        updateAuthUI(fbUser);
+      })
+      .catch(async err => {
+        if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+          // This Google account already has a Firestore doc — sign into it and merge
+          const localStats = { ...wordStats };
+          try {
+            const result = await auth.signInWithCredential(err.credential);
+            fbUser = result.user;
+            // Merge local session stats into the existing Google account doc
+            const userRef = db.collection("users").doc(fbUser.uid);
+            const snap = await userRef.get();
+            const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
+            for (const [word, stat] of Object.entries(localStats)) {
+              if (savedStats[word]) {
+                savedStats[word].seen += stat.seen;
+                savedStats[word].correct += stat.correct;
+              } else {
+                savedStats[word] = stat;
+              }
+            }
+            wordStats = savedStats;
+            await userRef.update({
+              wordStats,
+              lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+              displayName: fbUser.displayName || '',
+              photoURL: fbUser.photoURL || ''
+            });
+            if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
+            document.querySelector('.opt-data-btn').style.display = 'none';
+            updateAuthUI(fbUser);
+          } catch (innerErr) {
+            console.warn("Google sign-in merge error:", innerErr);
+            updateAuthUI(currentUser);
+          }
+        } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+          console.warn("Google link error:", err);
+          updateAuthUI(currentUser);
+        } else {
+          updateAuthUI(currentUser);
+        }
+      });
+  } else {
+    // Not anonymous — just sign in with Google normally
+    auth.signInWithPopup(googleProvider)
+      .then(result => {
+        fbUser = result.user;
+        updateAuthUI(fbUser);
+      })
+      .catch(err => {
+        if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+          console.warn("Google sign-in error:", err);
+        }
+        updateAuthUI(auth.currentUser);
+      });
+  }
+}
+
+function signOutGoogle() {
+  stopTimers();
+  flushTime();
+  auth.signOut().catch(err => console.warn("Sign-out error:", err));
+  // onAuthStateChanged will fire with null → triggers signInAnonymously
+  wordStats = {};
+  document.querySelector('.opt-data-btn').style.display = 'none';
+}
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
 function parseHMS(str) {
@@ -1666,15 +2338,25 @@ function stopTimers() {
 
 function flushTime() {
   if (!fbUser) return;
-  db.collection("users").doc(fbUser.uid).update({ totalTime: fmtHMS(localUserSeconds) });
+  db.collection("users").doc(fbUser.uid).update({
+    totalTime: fmtHMS(localUserSeconds),
+    wordStats: wordStats
+  });
   db.collection("stats").doc("global").update({ totalTime: fmtHMS(localGlobalSeconds) });
 }
 
-function trackAnswer(isRight) {
+function trackAnswer(isRight, word) {
   if (!fbUser) return;
+  // Update local per-word stats
+  if (word) {
+    if (!wordStats[word]) wordStats[word] = { seen: 0, correct: 0 };
+    wordStats[word].seen++;
+    if (isRight) wordStats[word].correct++;
+  }
   const inc1 = firebase.firestore.FieldValue.increment(1);
   db.collection("users").doc(fbUser.uid).update({
     totalQuestionsAnswered: inc1,
+    wordStats: wordStats,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
   });
   db.collection("stats").doc("global").update({
