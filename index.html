@@ -1978,6 +1978,10 @@ auth.onAuthStateChanged(async user => {
   // skip re-initializing — just update fbUser reference and the UI.
   if (user.uid === initializedUid) {
     fbUser = user;
+    // If this is a just-upgraded Google account, write the email now
+    if (user.email) {
+      db.collection("users").doc(user.uid).update({ email: user.email }).catch(() => {});
+    }
     updateAuthUI(user);
     return;
   }
