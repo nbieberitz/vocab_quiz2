@@ -2181,7 +2181,23 @@ function signInWithGoogle() {
       updateAuthUI(fbUser);
     })
     .catch(async err => {
-      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+      if (err.code === 'auth/user-token-expired' || err.code === 'auth/invalid-user-token') {
+        // Stale anonymous session — sign out and do a fresh Google sign-in
+        try {
+          await auth.signOut();
+          const result = await auth.signInWithPopup(googleProvider);
+          fbUser = result.user;
+          db.collection("users").doc(fbUser.uid).update({
+            displayName: fbUser.displayName || '',
+            email: fbUser.email || '',
+            photoURL: fbUser.photoURL || ''
+          }).catch(() => {});
+          updateAuthUI(fbUser);
+        } catch (innerErr) {
+          console.error("Sign-in after token expiry failed:", innerErr.code, innerErr.message);
+          updateAuthUI(auth.currentUser);
+        }
+      } else if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
         // Google account already has its own doc — sign in and merge stats
         const localStats = { ...wordStats };
         try {
