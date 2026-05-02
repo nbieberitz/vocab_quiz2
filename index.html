@@ -2213,16 +2213,16 @@ function signInWithGoogle() {
         const localStats = { ...wordStats };
         const localSeconds = localUserSeconds;
         try {
-          // Sign in as the Google user — use signInWithPopup as reliable fallback
-          let result;
-          if (err.credential) {
-            result = await auth.signInWithCredential(err.credential);
-          } else {
-            result = await auth.signInWithPopup(googleProvider);
+          // Must delete/sign-out the anonymous user FIRST — otherwise signInWithCredential
+          // sees a current user and attempts linking again, causing the same error
+          if (anonUser && anonUser.isAnonymous) {
+            await anonUser.delete().catch(() => auth.signOut());
           }
+          // Now no user is signed in — safe to sign in fresh as the Google user
+          const result = err.credential
+            ? await auth.signInWithCredential(err.credential)
+            : await auth.signInWithPopup(googleProvider);
           fbUser = result.user;
-          // Now signed in as Google user — safe to delete the orphaned anonymous account
-          if (anonUser && anonUser.isAnonymous) anonUser.delete().catch(() => {});
           const userRef = db.collection("users").doc(fbUser.uid);
           const snap = await userRef.get();
           const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
