@@ -1190,15 +1190,24 @@ kbd{
         </div>
       </div>
       <!-- Google sign-in button (shown when not signed in with Google) -->
-      <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()">
-        <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-          <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-        </svg>
-        Sign in with Google
-      </button>
+      <div id="signin-wrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()">
+          <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
+        <span id="signin-hint" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.07em;color:var(--text);opacity:0.5;display:flex;align-items:center;gap:4px">
+          <svg width="9" height="9" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.6;flex-shrink:0">
+            <rect x="2" y="5.5" width="8" height="5.5" rx="1.2" fill="currentColor"/>
+            <path d="M4 5.5V3.5a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+          </svg>
+          Sign in to save your progress
+        </span>
+      </div>
       <!-- User badge (shown when signed in with Google) -->
       <div class="user-badge" id="user-badge" style="display:none">
         <img class="user-badge-avatar" id="user-avatar" src="" alt="">
@@ -1433,13 +1442,21 @@ let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],order
 // Adaptive mode state
 let adaptiveCount=0, adaptiveScore=0, adaptiveStreak=0, adaptiveBestStreak=0;
 let adaptiveRecentWords=[], adaptiveNextReview=Math.floor(Math.random()*3)+4;
-let wordStats = {}; // { word: { seen: N, correct: N } } — must be declared before selectLesson('adaptive') runs
+let wordStats = {}; // { word: { seen: N, correct: N, lastSeen: timestamp } } — declared before selectLesson('adaptive') runs
+
+// ── New tracking state ────────────────────────────────────────────────────────
+let activityDays = [];      // ["YYYY-MM-DD", ...] — for streak calculation
+let sessionHistory = [];    // [{date, questionsAnswered, correctAnswers, duration}, ...]
+let sessionStartTime = null;
+let sessionQuestionsAnswered = 0;
+let sessionCorrectAnswers = 0;
 
 function setDir(d){
   dir=d;
   ['word','def','random'].forEach(k=>{
     document.getElementById('dir-'+k).className='dir-btn'+(d===k?' active':'');
   });
+  savePreferences();
   startSession();
 }
 
@@ -1481,6 +1498,7 @@ function selectLesson(id){
     document.getElementById('mode-quiz').className='mode-btn active';
     document.getElementById('mode-flash').className='mode-btn';
     buildLessonRow();
+    savePreferences();
     startSession();
     return;
   }
@@ -1492,7 +1510,9 @@ function selectLesson(id){
   document.getElementById('mode-quiz').className='mode-btn active';
   document.getElementById('mode-flash').className='mode-btn';
   selectedLesson=id==='all'?'all':parseInt(id);
-  buildLessonRow();startSession();
+  buildLessonRow();
+  savePreferences();
+  startSession();
 }
 
 function getPool(){return selectedLesson==='all'?[...ALL]:ALL.filter(x=>x.l===selectedLesson);}
@@ -1517,10 +1537,18 @@ function nextAdaptiveWord(){
     const s = wordStats[item.w];
     if(!s || s.seen === 0) return 3;      // unseen
     const p = s.correct / s.seen;
-    if(p < 0.5)  return 4;               // struggling — moderately prioritized
-    if(p < 0.75) return 2.5;             // needs work
-    if(p < 0.9)  return 1;              // decent
-    return 0.4;                          // mastered — still appears occasionally
+    let w;
+    if(p < 0.5)  w = 4;               // struggling — moderately prioritized
+    else if(p < 0.75) w = 2.5;        // needs work
+    else if(p < 0.9)  w = 1;          // decent
+    else w = 0.4;                      // mastered — still appears occasionally
+    // Recency boost: words not seen in a while get higher priority
+    if (s.lastSeen) {
+      const daysSince = (Date.now() - s.lastSeen) / 86400000;
+      if (daysSince > 7)  w *= 2.0;   // unseen for a week — strong boost
+      else if (daysSince > 3) w *= 1.5; // a few days — moderate boost
+    }
+    return w;
   });
 
   // Proper weighted random — no array slot inflation
@@ -1543,6 +1571,7 @@ function setMode(m){
   if(m==='adaptive'){adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;}
   if(m!=='adaptive') selectedLesson='all'; // reset lesson selection when switching modes
   buildLessonRow();
+  savePreferences();
   startSession();
 }
 
@@ -1822,6 +1851,7 @@ function setTheme(t){
   document.body.classList.toggle('light', t==='light');
   localStorage.setItem('vocab_theme', t);
   document.getElementById('theme-icon').textContent = t==='light' ? '☀️' : '🌙';
+  savePreferences();
 }
 
 let glossaryObserver=null;
@@ -2091,7 +2121,10 @@ async function initUserDoc(user) {
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
         sessionCount: 1,
-        wordStats: {}
+        wordStats: {},
+        activityDays: [],
+        sessionHistory: [],
+        preferences: {}
       };
       if (isGoogleUser(user)) {
         userData.displayName = user.displayName || '';
@@ -2116,7 +2149,82 @@ async function initUserDoc(user) {
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
     wordStats = snap.data().wordStats || {};
+    activityDays = snap.data().activityDays || [];
+    sessionHistory = snap.data().sessionHistory || [];
+    // Apply synced preferences after wordStats is loaded (adaptive mode needs it)
+    applyPreferences(snap.data().preferences || {});
   }
+  // Mark session start for history tracking
+  sessionStartTime = Date.now();
+  sessionQuestionsAnswered = 0;
+  sessionCorrectAnswers = 0;
+}
+
+// ── Preference sync ───────────────────────────────────────────────────────────
+function savePreferences() {
+  if (!fbUser) return;
+  db.collection("users").doc(fbUser.uid).update({
+    preferences: {
+      theme: localStorage.getItem('vocab_theme') || 'dark',
+      mode: mode,
+      dir: dir,
+      lastLesson: selectedLesson
+    }
+  }).catch(() => {});
+}
+
+function applyPreferences(prefs) {
+  if (!prefs || Object.keys(prefs).length === 0) return;
+
+  // Theme — setTheme is safe to call; savePreferences guard handles fbUser
+  if (prefs.theme) setTheme(prefs.theme);
+
+  const savedMode   = prefs.mode     || 'adaptive';
+  const savedDir    = prefs.dir      || 'word';
+  const savedLesson = prefs.lastLesson !== undefined ? prefs.lastLesson : 'all';
+
+  // Restore dir
+  dir = savedDir;
+  ['word','def','random'].forEach(k => {
+    const el = document.getElementById('dir-' + k);
+    if (el) el.className = 'dir-btn' + (savedDir === k ? ' active' : '');
+  });
+
+  // Restore mode + lesson without triggering multiple startSession calls
+  if (savedMode === 'flash') {
+    mode = 'flash';
+    const mq = document.getElementById('mode-quiz');
+    const mf = document.getElementById('mode-flash');
+    if (mq) mq.className = 'mode-btn';
+    if (mf) mf.className = 'mode-btn active';
+    const dirRow   = document.getElementById('dir-row');
+    const orderRow = document.getElementById('order-row');
+    const lessonRow = document.getElementById('lesson-row');
+    if (dirRow)    dirRow.style.display = 'none';
+    if (orderRow)  orderRow.style.display = 'none';
+    if (lessonRow) lessonRow.style.display = 'none';
+  } else if (savedMode === 'adaptive') {
+    mode = 'adaptive';
+    selectedLesson = 'all';
+    const mq = document.getElementById('mode-quiz');
+    const mf = document.getElementById('mode-flash');
+    if (mq) mq.className = 'mode-btn active';
+    if (mf) mf.className = 'mode-btn';
+    const orderRow = document.getElementById('order-row');
+    if (orderRow) orderRow.style.display = 'none';
+  } else {
+    mode = 'quiz';
+    selectedLesson = (savedLesson === 'all') ? 'all' : parseInt(savedLesson);
+    const mq = document.getElementById('mode-quiz');
+    const mf = document.getElementById('mode-flash');
+    if (mq) mq.className = 'mode-btn active';
+    if (mf) mf.className = 'mode-btn';
+    const orderRow = document.getElementById('order-row');
+    if (orderRow) orderRow.style.display = 'flex';
+  }
+
+  buildLessonRow();
+  startSession();
 }
 
 // ── Auth UI helpers ───────────────────────────────────────────────────────────
@@ -2137,10 +2245,13 @@ function updateAuthUI(user) {
 
   if (!isGoogleUser(user)) {
     badge.style.display = 'none';
+    document.getElementById('signin-wrap').style.display = 'flex';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
     signinBtn.innerHTML = GOOGLE_SVG + 'Sign in with Google';
+    document.getElementById('signin-hint').style.display = 'flex';
   } else {
+    document.getElementById('signin-wrap').style.display = 'none';
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
@@ -2231,6 +2342,7 @@ function signInWithGoogle() {
         console.error("Google sign-in error:", err.code, err.message);
         const btn = document.getElementById('google-signin-btn');
         btn.disabled = false;
+        document.getElementById('signin-hint').style.display = 'none';
         if (err.code === 'auth/unauthorized-domain') {
           btn.innerHTML = GOOGLE_SVG + 'Domain not authorized — see console';
           console.error(
@@ -2254,8 +2366,14 @@ function signInWithGoogle() {
 function signOutGoogle() {
   stopTimers();
   flushTime();
+  endSession();
   auth.signOut().catch(err => console.warn("Sign-out error:", err));
   wordStats = {};
+  activityDays = [];
+  sessionHistory = [];
+  sessionStartTime = null;
+  sessionQuestionsAnswered = 0;
+  sessionCorrectAnswers = 0;
 }
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
@@ -2288,7 +2406,8 @@ function flushTime() {
   if (!fbUser) return;
   db.collection("users").doc(fbUser.uid).update({
     totalTime: fmtHMS(localUserSeconds),
-    wordStats: wordStats
+    wordStats: wordStats,
+    activityDays: activityDays
   });
   db.collection("stats").doc("global").update({ totalTime: fmtHMS(localGlobalSeconds) });
 }
@@ -2300,7 +2419,15 @@ function trackAnswer(isRight, word) {
     if (!wordStats[word]) wordStats[word] = { seen: 0, correct: 0 };
     wordStats[word].seen++;
     if (isRight) wordStats[word].correct++;
+    wordStats[word].lastSeen = Date.now(); // timestamp for spaced repetition
   }
+  // Daily activity log — used for streak calculation
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  if (!activityDays.includes(today)) activityDays.push(today);
+  // Per-session counters
+  sessionQuestionsAnswered++;
+  if (isRight) sessionCorrectAnswers++;
+
   const inc1 = firebase.firestore.FieldValue.increment(1);
   db.collection("users").doc(fbUser.uid).update({
     totalQuestionsAnswered: inc1,
@@ -2313,10 +2440,32 @@ function trackAnswer(isRight, word) {
   });
 }
 
+// Saves a session record when the user leaves or signs out.
+function endSession() {
+  if (!fbUser || !sessionStartTime || sessionQuestionsAnswered === 0) return;
+  const duration = Math.round((Date.now() - sessionStartTime) / 1000);
+  const record = {
+    date: new Date().toISOString().slice(0, 10),
+    questionsAnswered: sessionQuestionsAnswered,
+    correctAnswers: sessionCorrectAnswers,
+    duration: duration
+  };
+  const updated = [...sessionHistory, record].slice(-50); // keep last 50 sessions
+  sessionHistory = updated;
+  db.collection("users").doc(fbUser.uid).update({
+    sessionHistory: updated
+  }).catch(() => {});
+  // Reset so duplicate calls don't double-record
+  sessionStartTime = Date.now();
+  sessionQuestionsAnswered = 0;
+  sessionCorrectAnswers = 0;
+}
+
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     stopTimers();
     flushTime();
+    endSession();
   } else {
     startSecondTimer();
   }
@@ -2324,6 +2473,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("beforeunload", () => {
   stopTimers();
   flushTime();
+  endSession();
 });
 // ─────────────────────────────────────────────────────────────────────────────
 </script>
