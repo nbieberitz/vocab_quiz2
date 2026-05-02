@@ -1189,15 +1189,15 @@ kbd{
           <span id="theme-icon">🌙</span>
         </div>
       </div>
-      <!-- Google sign-in button (shown when anonymous) -->
-      <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()" style="display:none">
+      <!-- Google sign-in button (shown when not signed in with Google) -->
+      <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()">
         <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
           <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
           <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
           <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
         </svg>
-        Save Progress
+        Sign in with Google
       </button>
       <!-- User badge (shown when signed in with Google) -->
       <div class="user-badge" id="user-badge" style="display:none">
@@ -1205,30 +1205,11 @@ kbd{
         <span class="user-badge-name" id="user-display-name"></span>
         <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
       </div>
-      <!-- Optional name submission (anon users without a display name) -->
-      <button class="opt-data-btn" onclick="openNameModal()" style="display:none">
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
-          <path d="M1.5 10.5c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
-        Send optional data
-      </button>
+
     </div>
   </div>
 
-  <!-- Name modal -->
-  <div class="name-modal-overlay" id="name-modal-overlay" onclick="handleNameOverlayClick(event)">
-    <div class="name-modal">
-      <div class="name-modal-title">OPTIONAL <em>DATA</em></div>
-      <p class="name-modal-desc">This allows minor optional data to be sent to the developer to help improve the website if needed.</p>
-      <input class="name-modal-input" id="name-modal-input" type="text" placeholder="Your name" maxlength="60" oninput="onNameInput()" onkeydown="if(event.key==='Enter'&&!document.getElementById('name-modal-submit').disabled)submitName()">
-      <div id="name-modal-thanks" class="name-modal-thanks" style="display:none">✓ Thanks! Your name has been saved.</div>
-      <div class="name-modal-actions" id="name-modal-actions">
-        <button class="name-modal-cancel" onclick="closeNameModal()">Cancel</button>
-        <button class="name-modal-submit" id="name-modal-submit" onclick="submitName()" disabled>Submit</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Heatmap overlay -->
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
@@ -1930,7 +1911,7 @@ selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
 
 document.addEventListener('keydown', e => {
-  if (document.getElementById('name-modal-overlay').classList.contains('open')) return;
+
   if (document.getElementById('heatmap-overlay').style.display === 'block') {
     if (e.key === 'Escape') closeHeatmap();
     return;
@@ -2028,55 +2009,6 @@ function closeHeatmap() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Optional Name Modal ──────────────────────────────────────────────────────
-function openNameModal() {
-  const overlay = document.getElementById('name-modal-overlay');
-  const input = document.getElementById('name-modal-input');
-  const thanks = document.getElementById('name-modal-thanks');
-  const actions = document.getElementById('name-modal-actions');
-  const submit = document.getElementById('name-modal-submit');
-  // Reset state
-  input.value = '';
-  input.style.display = '';
-  thanks.style.display = 'none';
-  actions.style.display = 'flex';
-  submit.disabled = true;
-  overlay.classList.add('open');
-  setTimeout(() => input.focus(), 150);
-}
-
-function closeNameModal() {
-  document.getElementById('name-modal-overlay').classList.remove('open');
-}
-
-function handleNameOverlayClick(e) {
-  if (e.target === document.getElementById('name-modal-overlay')) closeNameModal();
-}
-
-function onNameInput() {
-  const val = document.getElementById('name-modal-input').value.trim();
-  document.getElementById('name-modal-submit').disabled = val.length === 0;
-}
-
-function submitName() {
-  const name = document.getElementById('name-modal-input').value.trim();
-  if (!name || !fbUser) return;
-  const submit = document.getElementById('name-modal-submit');
-  submit.disabled = true;
-  submit.textContent = 'Saving…';
-  db.collection("users").doc(fbUser.uid).update({ displayName: name })
-    .then(() => {
-      document.getElementById('name-modal-input').style.display = 'none';
-      document.getElementById('name-modal-actions').style.display = 'none';
-      document.getElementById('name-modal-thanks').style.display = 'block';
-      document.querySelector('.opt-data-btn').style.display = 'none';
-      setTimeout(() => closeNameModal(), 1800);
-    })
-    .catch(() => {
-      submit.disabled = false;
-      submit.textContent = 'Submit';
-    });
-}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Firebase Tracking ───────────────────────────────────────────────────────
@@ -2171,9 +2103,6 @@ async function initUserDoc(user) {
     localUserSeconds = 0;
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
     wordStats = {};
-    if (user.isAnonymous) {
-      document.querySelector('.opt-data-btn').style.display = '';
-    }
   } else {
     // Returning user — load their saved stats as the source of truth
     await userRef.update({
@@ -2187,32 +2116,29 @@ async function initUserDoc(user) {
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
     wordStats = snap.data().wordStats || {};
-    if (user.isAnonymous && !snap.data().displayName) {
-      document.querySelector('.opt-data-btn').style.display = '';
-    }
   }
 }
 
 // ── Auth UI helpers ───────────────────────────────────────────────────────────
+const GOOGLE_SVG = `<svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+  <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+  <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+</svg>`;
+
 function updateAuthUI(user) {
   const signinBtn = document.getElementById('google-signin-btn');
   const badge = document.getElementById('user-badge');
-  const optBtn = document.querySelector('.opt-data-btn');
 
   if (!user || user.isAnonymous) {
     badge.style.display = 'none';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
-    signinBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-      <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-    </svg>Save Progress`;
+    signinBtn.innerHTML = GOOGLE_SVG + 'Sign in with Google';
   } else {
     // Google user
     signinBtn.style.display = 'none';
-    optBtn.style.display = 'none';
     badge.style.display = 'flex';
     document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
     const avatar = document.getElementById('user-avatar');
@@ -2249,11 +2175,7 @@ function signInWithGoogle() {
         email: fbUser.email || '',
         photoURL: fbUser.photoURL || ''
       }).catch(() => {});
-      document.querySelector('.opt-data-btn').style.display = 'none';
       updateAuthUI(fbUser);
-    })
-    .catch(async err => {
-      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
         // Google account already has its own doc — sign in and merge stats
         const localStats = { ...wordStats };
         try {
@@ -2278,7 +2200,6 @@ function signInWithGoogle() {
             photoURL: fbUser.photoURL || ''
           });
           if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
-          document.querySelector('.opt-data-btn').style.display = 'none';
           updateAuthUI(fbUser);
         } catch (innerErr) {
           console.warn("Merge error:", innerErr);
@@ -2299,7 +2220,6 @@ function signOutGoogle() {
   flushTime();
   auth.signOut().catch(err => console.warn("Sign-out error:", err));
   wordStats = {};
-  document.querySelector('.opt-data-btn').style.display = 'none';
 }
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
