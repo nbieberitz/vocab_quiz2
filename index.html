@@ -1988,12 +1988,14 @@ auth.onAuthStateChanged(async user => {
 
   initializedUid = user.uid;
   fbUser = user;
-  try {
-    await initUserDoc(user);
-  } catch (err) {
-    console.error("initUserDoc error:", err);
+  if (!user.isAnonymous) {
+    try {
+      await initUserDoc(user);
+    } catch (err) {
+      console.error("initUserDoc error:", err);
+    }
+    startSecondTimer();
   }
-  startSecondTimer();
   updateAuthUI(user);
 });
 
@@ -2301,7 +2303,7 @@ function stopTimers() {
 }
 
 function flushTime() {
-  if (!fbUser) return;
+  if (!fbUser || fbUser.isAnonymous) return;
   db.collection("users").doc(fbUser.uid).update({
     totalTime: fmtHMS(localUserSeconds),
     wordStats: wordStats,
@@ -2311,7 +2313,7 @@ function flushTime() {
 }
 
 function trackAnswer(isRight, word) {
-  if (!fbUser) return;
+  if (!fbUser || fbUser.isAnonymous) return;
   // Update local per-word stats
   if (word) {
     if (!wordStats[word]) wordStats[word] = { seen: 0, correct: 0 };
@@ -2340,7 +2342,7 @@ function trackAnswer(isRight, word) {
 
 // Saves a session record when the user leaves or signs out.
 function endSession() {
-  if (!fbUser || !sessionStartTime || sessionQuestionsAnswered === 0) return;
+  if (!fbUser || fbUser.isAnonymous || !sessionStartTime || sessionQuestionsAnswered === 0) return;
   const duration = Math.round((Date.now() - sessionStartTime) / 1000);
   const record = {
     date: new Date().toISOString().slice(0, 10),
