@@ -2039,11 +2039,11 @@ async function initUserDoc(user) {
     wordStats = {};
   } else {
     // Returning user — load their saved stats as the source of truth
-    await userRef.update({
+    await userRef.set({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1),
       ...(user.email ? { email: user.email } : {})
-    });
+    }, { merge: true });
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
     wordStats = snap.data().wordStats || {};
@@ -2065,14 +2065,14 @@ async function initUserDoc(user) {
 // ── Preference sync ───────────────────────────────────────────────────────────
 function savePreferences() {
   if (!fbUser) return;
-  db.collection("users").doc(fbUser.uid).update({
+  db.collection("users").doc(fbUser.uid).set({
     preferences: {
       theme: localStorage.getItem('vocab_theme') || 'dark',
       mode: mode,
       dir: dir,
       lastLesson: selectedLesson
     }
-  }).catch(() => {});
+  }, { merge: true }).catch(() => {});
 }
 
 function applyPreferences(prefs) {
@@ -2227,11 +2227,11 @@ function signInWithGoogle() {
             }
           }
           wordStats = savedStats;
-          await userRef.update({
+          await userRef.set({
             wordStats,
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
             ...(fbUser.email ? { email: fbUser.email } : {})
-          });
+          }, { merge: true });
           if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
           updateAuthUI(fbUser);
         } catch (innerErr) {
@@ -2308,12 +2308,12 @@ function stopTimers() {
 
 function flushTime() {
   if (!fbUser || fbUser.isAnonymous) return;
-  db.collection("users").doc(fbUser.uid).update({
+  db.collection("users").doc(fbUser.uid).set({
     totalTime: fmtHMS(localUserSeconds),
     wordStats: wordStats,
     activityDays: activityDays
-  });
-  db.collection("stats").doc("global").update({ totalTime: fmtHMS(localGlobalSeconds) });
+  }, { merge: true });
+  db.collection("stats").doc("global").set({ totalTime: fmtHMS(localGlobalSeconds) }, { merge: true });
 }
 
 function trackAnswer(isRight, word) {
@@ -2333,15 +2333,15 @@ function trackAnswer(isRight, word) {
   if (isRight) sessionCorrectAnswers++;
 
   const inc1 = firebase.firestore.FieldValue.increment(1);
-  db.collection("users").doc(fbUser.uid).update({
+  db.collection("users").doc(fbUser.uid).set({
     totalQuestionsAnswered: inc1,
     wordStats: wordStats,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  });
-  db.collection("stats").doc("global").update({
+  }, { merge: true });
+  db.collection("stats").doc("global").set({
     totalQuestionsAnswered: inc1,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  });
+  }, { merge: true });
 }
 
 // Saves a session record when the user leaves or signs out.
@@ -2356,9 +2356,9 @@ function endSession() {
   };
   const updated = [...sessionHistory, record].slice(-50); // keep last 50 sessions
   sessionHistory = updated;
-  db.collection("users").doc(fbUser.uid).update({
+  db.collection("users").doc(fbUser.uid).set({
     sessionHistory: updated
-  }).catch(() => {});
+  }, { merge: true }).catch(() => {});
   // Reset so duplicate calls don't double-record
   sessionStartTime = Date.now();
   sessionQuestionsAnswered = 0;
