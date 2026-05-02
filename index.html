@@ -2185,7 +2185,9 @@ function signInWithGoogle() {
     .then(result => {
       fbUser = result.user;
       if (fbUser.email) {
-        db.collection("users").doc(fbUser.uid).update({ email: fbUser.email }).catch(() => {});
+        db.collection("users").doc(fbUser.uid).update({ email: fbUser.email })
+          .then(() => console.log("email written:", fbUser.email))
+          .catch(err => console.error("email write failed:", err.code, err.message));
       }
       updateAuthUI(fbUser);
     })
