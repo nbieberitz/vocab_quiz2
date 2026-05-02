@@ -1973,6 +1973,12 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
+  // Clear any lingering anonymous session from before we removed signInAnonymously
+  if (user.isAnonymous) {
+    auth.signOut();
+    return;
+  }
+
   // If UID hasn't changed (e.g. linkWithPopup just upgraded the same anon account),
   // skip re-initializing — just update fbUser reference and the UI.
   if (user.uid === initializedUid) {
