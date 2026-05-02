@@ -2213,7 +2213,13 @@ function signInWithGoogle() {
         const localStats = { ...wordStats };
         const localSeconds = localUserSeconds;
         try {
-          const result = await auth.signInWithCredential(err.credential);
+          // Sign in as the Google user — use signInWithPopup as reliable fallback
+          let result;
+          if (err.credential) {
+            result = await auth.signInWithCredential(err.credential);
+          } else {
+            result = await auth.signInWithPopup(googleProvider);
+          }
           fbUser = result.user;
           // Now signed in as Google user — safe to delete the orphaned anonymous account
           if (anonUser && anonUser.isAnonymous) anonUser.delete().catch(() => {});
