@@ -1341,6 +1341,7 @@ let wordStats = {}; // { word: { seen: N, correct: N, lastSeen: timestamp } } �
 let fbUser = null;
 let secondTimer = null;
 let flushTimer = null;
+let syncTimer = null;
 let localUserSeconds = 0;
 let localGlobalSeconds = 0;
 
@@ -2303,6 +2304,34 @@ function parseHMS(str) {
   return (h||0)*3600 + (m||0)*60 + (s||0);
 }
 
+// Pulls latest data from Firestore and refreshes UI — called every 60s for multi-device sync.
+async function syncFromFirestore() {
+  if (!fbUser || fbUser.isAnonymous) return;
+  try {
+    const snap = await db.collection("users").doc(fbUser.uid).get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    // Merge remote wordStats — take the higher seen/correct count per word
+    const remote = data.wordStats || {};
+    for (const [word, stat] of Object.entries(remote)) {
+      if (!wordStats[word] || stat.seen > wordStats[word].seen) {
+        wordStats[word] = stat;
+      }
+    }
+    // Sync activity days (union of local + remote)
+    const remoteDays = data.activityDays || [];
+    remoteDays.forEach(d => { if (!activityDays.includes(d)) activityDays.push(d); });
+    // Sync time — take whichever is higher
+    const remoteSeconds = parseHMS(data.totalTime || "00:00:00");
+    if (remoteSeconds > localUserSeconds) localUserSeconds = remoteSeconds;
+    // Refresh heatmap if it's open
+    const heatmapOpen = document.getElementById('heatmap-overlay').style.display === 'block';
+    if (heatmapOpen) openHeatmap();
+  } catch (err) {
+    console.warn("Sync error:", err);
+  }
+}
+
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
 function startSecondTimer() {
   stopTimers();
@@ -2313,11 +2342,15 @@ function startSecondTimer() {
   flushTimer = setInterval(() => {
     flushTime();
   }, 60000);
+  syncTimer = setInterval(() => {
+    syncFromFirestore();
+  }, 60000);
 }
 
 function stopTimers() {
   clearInterval(secondTimer);
   clearInterval(flushTimer);
+  clearInterval(syncTimer);
   secondTimer = null;
   flushTimer = null;
 }
