@@ -2176,6 +2176,9 @@ function signInWithGoogle() {
         photoURL: fbUser.photoURL || ''
       }).catch(() => {});
       updateAuthUI(fbUser);
+    })
+    .catch(async err => {
+      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
         // Google account already has its own doc — sign in and merge stats
         const localStats = { ...wordStats };
         try {
