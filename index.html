@@ -1966,10 +1966,11 @@ function fmtHMS(s) {
 // ── Auth state listener — handles both anon and Google users ──────────────────
 let initializedUid = null;
 let signingOut = false;
+let suppressAnon = false;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    if (signingOut) { updateAuthUI(null); return; }
+    if (signingOut || suppressAnon) { updateAuthUI(null); return; }
     auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
     return;
   }
@@ -2214,7 +2215,9 @@ function signInWithGoogle() {
         const localSeconds = localUserSeconds;
         try {
           // Must delete/sign-out the anonymous user FIRST — otherwise signInWithCredential
-          // sees a current user and attempts linking again, causing the same error
+          // sees a current user and attempts linking again, causing the same error.
+          // suppressAnon prevents onAuthStateChanged from creating a new anon user during the gap.
+          suppressAnon = true;
           if (anonUser && anonUser.isAnonymous) {
             await anonUser.delete().catch(() => auth.signOut());
           }
@@ -2222,6 +2225,7 @@ function signInWithGoogle() {
           const result = err.credential
             ? await auth.signInWithCredential(err.credential)
             : await auth.signInWithPopup(googleProvider);
+          suppressAnon = false;
           fbUser = result.user;
           const userRef = db.collection("users").doc(fbUser.uid);
           const snap = await userRef.get();
