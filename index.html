@@ -2224,98 +2224,82 @@ function updateAuthUI(user) {
   }
 }
 
-// ── Google sign-in (redirect flow — works on any domain/hosting) ──────────────
+// ── Google sign-in (popup) ────────────────────────────────────────────────────
 function signInWithGoogle() {
   const btn = document.getElementById('google-signin-btn');
   btn.disabled = true;
-  btn.textContent = 'Redirecting…';
-
-  // Persist current session word stats across the page reload caused by redirect
-  try { sessionStorage.setItem('pendingWordStats', JSON.stringify(wordStats)); } catch(e) {}
+  btn.textContent = 'Signing in…';
 
   const currentUser = auth.currentUser;
-  if (currentUser && currentUser.isAnonymous) {
-    // Upgrade anonymous account → Google (preserves UID + existing Firestore doc)
-    currentUser.linkWithRedirect(googleProvider);
-  } else {
-    auth.signInWithRedirect(googleProvider);
-  }
+  const doSignIn = (user) => {
+    if (user && user.isAnonymous) {
+      // Upgrade anonymous → Google (preserves UID + Firestore doc)
+      return user.linkWithPopup(googleProvider);
+    } else {
+      return auth.signInWithPopup(googleProvider);
+    }
+  };
+
+  doSignIn(currentUser)
+    .then(result => {
+      fbUser = result.user;
+      db.collection("users").doc(fbUser.uid).update({
+        displayName: fbUser.displayName || '',
+        email: fbUser.email || '',
+        photoURL: fbUser.photoURL || ''
+      }).catch(() => {});
+      document.querySelector('.opt-data-btn').style.display = 'none';
+      updateAuthUI(fbUser);
+    })
+    .catch(async err => {
+      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+        // Google account already has its own doc — sign in and merge stats
+        const localStats = { ...wordStats };
+        try {
+          const result = await auth.signInWithCredential(err.credential);
+          fbUser = result.user;
+          const userRef = db.collection("users").doc(fbUser.uid);
+          const snap = await userRef.get();
+          const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
+          for (const [word, stat] of Object.entries(localStats)) {
+            if (savedStats[word]) {
+              savedStats[word].seen += stat.seen;
+              savedStats[word].correct += stat.correct;
+            } else {
+              savedStats[word] = stat;
+            }
+          }
+          wordStats = savedStats;
+          await userRef.update({
+            wordStats,
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+            displayName: fbUser.displayName || '',
+            photoURL: fbUser.photoURL || ''
+          });
+          if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
+          document.querySelector('.opt-data-btn').style.display = 'none';
+          updateAuthUI(fbUser);
+        } catch (innerErr) {
+          console.warn("Merge error:", innerErr);
+          updateAuthUI(auth.currentUser);
+        }
+      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        console.warn("Google sign-in error:", err.code, err.message);
+        updateAuthUI(auth.currentUser);
+      } else {
+        // User closed the popup — just reset the button
+        updateAuthUI(auth.currentUser);
+      }
+    });
 }
 
 function signOutGoogle() {
   stopTimers();
   flushTime();
   auth.signOut().catch(err => console.warn("Sign-out error:", err));
-  // onAuthStateChanged fires with null → auto re-signs in anonymously
   wordStats = {};
   document.querySelector('.opt-data-btn').style.display = 'none';
 }
-
-// ── Handle redirect result on page load ───────────────────────────────────────
-auth.getRedirectResult().then(async result => {
-  if (!result || !result.user) return; // No pending redirect — normal load
-
-  fbUser = result.user;
-
-  // Restore any word stats that were answered before the redirect
-  let pending = {};
-  try {
-    const raw = sessionStorage.getItem('pendingWordStats');
-    if (raw) { pending = JSON.parse(raw); sessionStorage.removeItem('pendingWordStats'); }
-  } catch(e) {}
-
-  if (!result.user.isAnonymous && Object.keys(pending).length > 0) {
-    // Merge pending stats into whatever is now in wordStats (loaded by initUserDoc)
-    for (const [word, stat] of Object.entries(pending)) {
-      if (wordStats[word]) {
-        wordStats[word].seen += stat.seen;
-        wordStats[word].correct += stat.correct;
-      } else {
-        wordStats[word] = stat;
-      }
-    }
-    // Flush merged stats to Firestore
-    db.collection("users").doc(fbUser.uid).update({ wordStats }).catch(() => {});
-  }
-
-}).catch(async err => {
-  // 'credential-already-in-use': the Google account already has its own Firestore doc
-  // Sign into that existing account and merge the pending stats
-  if (err.code === 'auth/credential-already-in-use' && err.credential) {
-    let pending = {};
-    try {
-      const raw = sessionStorage.getItem('pendingWordStats');
-      if (raw) { pending = JSON.parse(raw); sessionStorage.removeItem('pendingWordStats'); }
-    } catch(e) {}
-
-    try {
-      const result = await auth.signInWithCredential(err.credential);
-      fbUser = result.user;
-      const userRef = db.collection("users").doc(fbUser.uid);
-      const snap = await userRef.get();
-      const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
-      for (const [word, stat] of Object.entries(pending)) {
-        if (savedStats[word]) {
-          savedStats[word].seen += stat.seen;
-          savedStats[word].correct += stat.correct;
-        } else {
-          savedStats[word] = stat;
-        }
-      }
-      wordStats = savedStats;
-      await userRef.update({
-        wordStats,
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        displayName: fbUser.displayName || '',
-        photoURL: fbUser.photoURL || ''
-      });
-    } catch(innerErr) {
-      console.warn("Credential merge error:", innerErr);
-    }
-  } else if (err.code !== 'auth/no-current-user') {
-    console.warn("Redirect result error:", err);
-  }
-});
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
 function parseHMS(str) {
