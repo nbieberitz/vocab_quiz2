@@ -2213,6 +2213,9 @@ function signInWithGoogle() {
         // Google account already has its own doc — sign in and merge stats
         const localStats = { ...wordStats };
         try {
+          // Delete the orphaned anonymous account before switching
+          const orphan = auth.currentUser;
+          if (orphan && orphan.isAnonymous) await orphan.delete().catch(() => {});
           const result = await auth.signInWithCredential(err.credential);
           fbUser = result.user;
           const userRef = db.collection("users").doc(fbUser.uid);
