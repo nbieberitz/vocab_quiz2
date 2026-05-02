@@ -1969,8 +1969,7 @@ let signingOut = false;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    if (signingOut) return; // deliberate sign-out — don't create a new anon session
-    auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
+    updateAuthUI(null);
     return;
   }
 
@@ -2174,16 +2173,9 @@ function signInWithGoogle() {
   btn.textContent = 'Signing in…';
 
   const currentUser = auth.currentUser;
-  const doSignIn = (user) => {
-    if (user && user.isAnonymous) {
-      // Upgrade anonymous → Google (preserves UID + Firestore doc)
-      return user.linkWithPopup(googleProvider);
-    } else {
-      return auth.signInWithPopup(googleProvider);
-    }
-  };
+  const doSignIn = () => auth.signInWithPopup(googleProvider);
 
-  doSignIn(currentUser)
+  doSignIn()
     .then(async result => {
       fbUser = result.user;
       // Ensure doc exists then write email (set+merge handles new and existing users)
@@ -2207,38 +2199,6 @@ function signInWithGoogle() {
           updateAuthUI(fbUser);
         } catch (innerErr) {
           console.error("Sign-in after token expiry failed:", innerErr.code, innerErr.message);
-          updateAuthUI(auth.currentUser);
-        }
-      } else if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
-        // Google account already has its own doc — sign in and merge stats
-        const localStats = { ...wordStats };
-        try {
-          // Delete the orphaned anonymous account before switching
-          const orphan = auth.currentUser;
-          if (orphan && orphan.isAnonymous) await orphan.delete().catch(() => {});
-          const result = await auth.signInWithCredential(err.credential);
-          fbUser = result.user;
-          const userRef = db.collection("users").doc(fbUser.uid);
-          const snap = await userRef.get();
-          const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
-          for (const [word, stat] of Object.entries(localStats)) {
-            if (savedStats[word]) {
-              savedStats[word].seen += stat.seen;
-              savedStats[word].correct += stat.correct;
-            } else {
-              savedStats[word] = stat;
-            }
-          }
-          wordStats = savedStats;
-          await userRef.set({
-            wordStats,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-            ...(fbUser.email ? { email: fbUser.email } : {})
-          }, { merge: true });
-          if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
-          updateAuthUI(fbUser);
-        } catch (innerErr) {
-          console.warn("Merge error:", innerErr);
           updateAuthUI(auth.currentUser);
         }
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
