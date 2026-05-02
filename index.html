@@ -2023,7 +2023,8 @@ async function initUserDoc(user) {
         wordStats: {},
         activityDays: [],
         sessionHistory: [],
-        preferences: {}
+        preferences: {},
+        ...(user.email ? { email: user.email } : {})
       };
       t.set(userRef, userData);
     });
@@ -2034,7 +2035,8 @@ async function initUserDoc(user) {
     // Returning user — load their saved stats as the source of truth
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-      sessionCount: firebase.firestore.FieldValue.increment(1)
+      sessionCount: firebase.firestore.FieldValue.increment(1),
+      ...(user.email ? { email: user.email } : {})
     });
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
@@ -2212,7 +2214,8 @@ function signInWithGoogle() {
           wordStats = savedStats;
           await userRef.update({
             wordStats,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+            ...(fbUser.email ? { email: fbUser.email } : {})
           });
           if (snap.exists) localUserSeconds = parseHMS(snap.data().totalTime);
           updateAuthUI(fbUser);
