@@ -166,6 +166,19 @@ body.light .flash-card::before{
   flex-shrink:0;
 }
 .user-badge-signout:hover{color:var(--wrong);}
+.user-badge-refresh{
+  background:transparent;border:none;
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.07em;
+  text-transform:uppercase;
+  color:var(--muted);
+  cursor:pointer;padding:0;
+  transition:color .15s;
+  flex-shrink:0;
+}
+.user-badge-refresh:hover{color:var(--accent);}
+.user-badge-refresh.spinning svg{animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 .adaptive-word-badge{
   display:inline-block;
@@ -1104,6 +1117,10 @@ kbd{
       <div class="user-badge" id="user-badge" style="display:none">
         <img class="user-badge-avatar" id="user-avatar" src="" alt="">
         <span class="user-badge-name" id="user-display-name"></span>
+        <button class="user-badge-refresh" id="badge-refresh-btn" onclick="manualSync(this)" title="Sync data">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sync
+        </button>
         <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
       </div>
 
@@ -1128,6 +1145,10 @@ kbd{
           </div>
         </div>
       </div>
+      <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" style="margin-right:8px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Sync
+      </button>
       <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
     </div>
     <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -2329,6 +2350,16 @@ async function syncFromFirestore() {
     if (heatmapOpen) openHeatmap();
   } catch (err) {
     console.warn("Sync error:", err);
+  }
+}
+
+// Manual sync triggered by refresh buttons — shows brief spinning state.
+async function manualSync(btn) {
+  if (!fbUser || fbUser.isAnonymous) return;
+  if (btn) btn.classList.add('spinning');
+  await syncFromFirestore();
+  if (btn) {
+    setTimeout(() => btn.classList.remove('spinning'), 700);
   }
 }
 
