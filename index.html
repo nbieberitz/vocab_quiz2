@@ -347,10 +347,7 @@ body::after{
 .quiz-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
 .quiz-left{display:flex;flex-direction:column;gap:1rem;min-height:320px;justify-content:center}
 .quiz-right{display:flex;flex-direction:column;gap:9px;justify-content:center}
-@media(max-width:720px){
-  .quiz-layout{grid-template-columns:1fr}
-  .wrap{padding:1.5rem 1rem 3rem}
-}
+
 
 /* Header */
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem}
@@ -896,9 +893,7 @@ body::after{
   position:relative;
   min-height:101%;
 }
-@media(max-width:720px){
-  .glossary-layout{padding:1.5rem 1rem 6rem;}
-}
+
 .glossary-main{
   flex:1;
   min-width:0;
@@ -1055,6 +1050,97 @@ kbd{
   margin:0 2px;
   background:var(--surface2);
   box-shadow:0 2px 0 var(--border2);
+}
+/* ═══════════════════════════════════════
+   MOBILE  (≤ 600px)
+═══════════════════════════════════════ */
+@media(max-width:600px){
+
+  /* Core layout */
+  .wrap{padding:1rem 0.75rem 3rem}
+  .header{flex-direction:column;align-items:flex-start;gap:0.75rem;margin-bottom:1.25rem}
+
+  /* Logo */
+  .logo{font-size:clamp(2.2rem,12vw,3rem)}
+
+  /* Toolbar — wrap buttons */
+  .header > div{width:100%}
+  .header > div > div:first-child{flex-wrap:wrap;gap:6px}
+  .glossary-btn{font-size:10px;padding:7px 12px;gap:5px}
+
+  /* Sign-in area full width */
+  #signin-wrap{align-items:flex-start;width:100%}
+  .google-signin-btn{width:100%;justify-content:center}
+  .user-badge{width:100%;justify-content:flex-start}
+
+  /* Quiz layout single column */
+  .quiz-layout{grid-template-columns:1fr}
+
+  /* Lesson row wraps */
+  .lesson-row{gap:6px}
+
+  /* Choices */
+  .choice-btn{font-size:13px;padding:12px 14px}
+
+  /* Heatmap overlay header */
+  .heatmap-header{
+    flex-direction:column;
+    align-items:flex-start;
+    padding:1rem 1rem 1rem;
+    gap:0.6rem;
+  }
+  .heatmap-title-center{
+    position:static;
+    transform:none;
+    order:-1;
+    width:100%;
+    text-align:center;
+    margin-bottom:0.25rem;
+  }
+  .heatmap-header > div:first-child{order:0}
+  .heatmap-header-meta{
+    margin-left:0 !important;
+    text-align:left !important;
+    width:100%;
+  }
+  .heatmap-legend{flex-wrap:wrap;gap:8px;justify-content:flex-start !important}
+
+  /* Heatmap grid — 5 columns on mobile */
+  .heatmap-grid{
+    grid-template-columns:repeat(5,1fr);
+    gap:5px;
+    padding:0 12px 24px;
+  }
+  .heatmap-lesson-labels{
+    grid-template-columns:repeat(5,1fr);
+    gap:5px;
+    padding:0 12px 4px;
+  }
+  .heatmap-cell{aspect-ratio:1/1;border-radius:6px}
+  .heatmap-cell-label{font-size:8px;padding:2px 3px}
+  .heatmap-cell-tooltip{font-size:10px;white-space:normal;max-width:140px}
+  .heatmap-row-label{grid-column:1/-1}
+
+  /* Glossary overlay */
+  .glossary-layout{padding:1rem 0.75rem 5rem}
+  .glossary-topbar{flex-direction:column;align-items:flex-start;gap:0.5rem}
+  .glossary-close{padding:7px 14px;font-size:11px}
+
+  /* Mode toggle */
+  .mode-toggle{width:100%}
+  .mode-btn{flex:1}
+}
+
+/* ═══════════════════════════════════════
+   TABLET  (601px – 900px)
+═══════════════════════════════════════ */
+@media(min-width:601px) and (max-width:900px){
+  .wrap{padding:1.5rem 1.25rem 3rem}
+  .quiz-layout{grid-template-columns:1fr}
+  .heatmap-grid{grid-template-columns:repeat(7,1fr);gap:6px;padding:0 20px 28px}
+  .heatmap-lesson-labels{grid-template-columns:repeat(7,1fr);gap:6px;padding:0 20px 4px}
+  .heatmap-header{padding:1.5rem 20px 1rem}
+  .glossary-layout{padding:1.5rem 1.25rem 6rem}
 }
 </style>
 </head>
