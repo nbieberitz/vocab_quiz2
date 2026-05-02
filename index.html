@@ -2073,10 +2073,11 @@ function fmtHMS(s) {
 
 // ── Auth state listener — handles both anon and Google users ──────────────────
 let initializedUid = null;
+let signingOut = false;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    // No session — sign in anonymously
+    if (signingOut) return; // deliberate sign-out — don't create a new anon session
     auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
     return;
   }
@@ -2374,16 +2375,20 @@ function signInWithGoogle() {
 }
 
 function signOutGoogle() {
+  signingOut = true;
   stopTimers();
   flushTime();
   endSession();
   auth.signOut().catch(err => console.warn("Sign-out error:", err));
+  fbUser = null;
+  initializedUid = null;
   wordStats = {};
   activityDays = [];
   sessionHistory = [];
   sessionStartTime = null;
   sessionQuestionsAnswered = 0;
   sessionCorrectAnswers = 0;
+  updateAuthUI(null);
 }
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
