@@ -1969,13 +1969,8 @@ let signingOut = false;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    updateAuthUI(null);
-    return;
-  }
-
-  // Delete any anonymous account — sign-out only ends the session, delete removes it from Auth
-  if (user.isAnonymous) {
-    user.delete().catch(() => auth.signOut());
+    if (signingOut) { updateAuthUI(null); return; }
+    auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
     return;
   }
 
@@ -2179,9 +2174,14 @@ function signInWithGoogle() {
   btn.textContent = 'Signing in…';
 
   const currentUser = auth.currentUser;
-  const doSignIn = () => auth.signInWithPopup(googleProvider);
+  const doSignIn = (user) => {
+    if (user && user.isAnonymous) {
+      return user.linkWithPopup(googleProvider);
+    }
+    return auth.signInWithPopup(googleProvider);
+  };
 
-  doSignIn()
+  doSignIn(currentUser)
     .then(async result => {
       fbUser = result.user;
       // Ensure doc exists then write email (set+merge handles new and existing users)
@@ -2205,6 +2205,43 @@ function signInWithGoogle() {
           updateAuthUI(fbUser);
         } catch (innerErr) {
           console.error("Sign-in after token expiry failed:", innerErr.code, innerErr.message);
+          updateAuthUI(auth.currentUser);
+        }
+      } else if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+        // Computer #2 case: Google account exists elsewhere — merge anon data in, then delete anon
+        const anonUser = auth.currentUser;
+        const localStats = { ...wordStats };
+        const localSeconds = localUserSeconds;
+        try {
+          const result = await auth.signInWithCredential(err.credential);
+          fbUser = result.user;
+          // Now signed in as Google user — safe to delete the orphaned anonymous account
+          if (anonUser && anonUser.isAnonymous) anonUser.delete().catch(() => {});
+          const userRef = db.collection("users").doc(fbUser.uid);
+          const snap = await userRef.get();
+          const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
+          for (const [word, stat] of Object.entries(localStats)) {
+            if (savedStats[word]) {
+              savedStats[word].seen += stat.seen;
+              savedStats[word].correct += stat.correct;
+              savedStats[word].lastSeen = Math.max(savedStats[word].lastSeen || 0, stat.lastSeen || 0);
+            } else {
+              savedStats[word] = stat;
+            }
+          }
+          wordStats = savedStats;
+          const savedSeconds = snap.exists ? parseHMS(snap.data().totalTime || "00:00:00") : 0;
+          localUserSeconds = savedSeconds + localSeconds;
+          await userRef.set({
+            wordStats,
+            totalTime: fmtHMS(localUserSeconds),
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+            ...(fbUser.email ? { email: fbUser.email } : {})
+          }, { merge: true });
+          startSecondTimer();
+          updateAuthUI(fbUser);
+        } catch (innerErr) {
+          console.warn("Merge error:", innerErr);
           updateAuthUI(auth.currentUser);
         }
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
