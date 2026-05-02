@@ -192,11 +192,17 @@ body.light .flash-card::before{
 body.light .adaptive-word-badge{color:rgba(0,0,0,0.7);}
 
 .heatmap-header{
+  position:relative;
   display:flex;
   align-items:flex-start;
-  justify-content:space-between;
   padding:2rem 32px 1.5rem;
   gap:1rem;
+}
+.heatmap-title-center{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:2rem;
 }
 .heatmap-header-left{
   display:flex;flex-direction:column;gap:0.6rem;
@@ -1132,26 +1138,29 @@ kbd{
   <!-- Heatmap overlay -->
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
     <div class="heatmap-header">
-      <div class="heatmap-header-left">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="glossary-title">Word Heat Map</div>
-          <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Sync
-          </button>
-        </div>
-        <div class="heatmap-header-meta">
-          <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
-          <div class="heatmap-legend">
-            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-unseen)"></div>Unseen</div>
-            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-low)"></div>&lt;50%</div>
-            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-mid)"></div>50–74%</div>
-            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-good)"></div>75–89%</div>
-            <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-great)"></div>90%+</div>
-          </div>
+      <!-- Left: Close + Sync -->
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
+        <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sync
+        </button>
+      </div>
+      <!-- Center: Title absolutely positioned -->
+      <div class="heatmap-title-center">
+        <div class="glossary-title">Word Heat Map</div>
+      </div>
+      <!-- Right: Meta (subtitle + legend) pushed to right -->
+      <div class="heatmap-header-meta" style="margin-left:auto;text-align:right">
+        <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
+        <div class="heatmap-legend" style="justify-content:flex-end">
+          <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-unseen)"></div>Unseen</div>
+          <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-low)"></div>&lt;50%</div>
+          <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-mid)"></div>50–74%</div>
+          <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-good)"></div>75–89%</div>
+          <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-great)"></div>90%+</div>
         </div>
       </div>
-      <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
     </div>
     <div class="heatmap-grid" id="heatmap-grid"></div>
   </div>
