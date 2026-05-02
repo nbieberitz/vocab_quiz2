@@ -2089,7 +2089,11 @@ auth.onAuthStateChanged(async user => {
 
   initializedUid = user.uid;
   fbUser = user;
-  await initUserDoc(user);
+  try {
+    await initUserDoc(user);
+  } catch (err) {
+    console.error("initUserDoc error:", err);
+  }
   startSecondTimer();
   updateAuthUI(user);
 });
@@ -2152,7 +2156,11 @@ async function initUserDoc(user) {
     activityDays = snap.data().activityDays || [];
     sessionHistory = snap.data().sessionHistory || [];
     // Apply synced preferences after wordStats is loaded (adaptive mode needs it)
-    applyPreferences(snap.data().preferences || {});
+    try {
+      applyPreferences(snap.data().preferences || {});
+    } catch (err) {
+      console.warn("applyPreferences error:", err);
+    }
   }
   // Mark session start for history tracking
   sessionStartTime = Date.now();
