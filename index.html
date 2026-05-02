@@ -105,28 +105,6 @@ body.light .flash-card::before{
   background:linear-gradient(90deg,transparent,rgba(0,119,204,0.12),transparent);
 }
 
-/* Optional data button */
-.opt-data-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  margin-top:8px;
-  padding:7px 14px;
-  background:transparent;
-  border:1px solid var(--border2);
-  border-radius:20px;
-  color:var(--muted);
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.09em;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:all .15s;
-  width:fit-content;
-}
-.opt-data-btn:hover{
-  border-color:var(--text);
-  color:var(--text);
-}
-.opt-data-btn svg{opacity:0.5}
-
 /* Google sign-in button */
 .google-signin-btn{
   display:inline-flex;align-items:center;gap:8px;
@@ -188,92 +166,6 @@ body.light .flash-card::before{
   flex-shrink:0;
 }
 .user-badge-signout:hover{color:var(--wrong);}
-
-/* Name modal */
-.name-modal-overlay{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,0.55);
-  backdrop-filter:blur(6px);
-  z-index:1000;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;
-  transition:opacity .2s;
-}
-.name-modal-overlay.open{opacity:1;pointer-events:all;}
-.name-modal{
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:16px;
-  padding:2rem 2rem 1.5rem;
-  width:min(420px,90vw);
-  box-shadow:0 8px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(0,200,255,0.06);
-  display:flex;flex-direction:column;gap:1.1rem;
-  transform:translateY(10px);
-  transition:transform .2s;
-}
-.name-modal-overlay.open .name-modal{transform:translateY(0);}
-.name-modal-title{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:1.7rem;letter-spacing:0.07em;
-  color:var(--text);
-  line-height:1;
-}
-.name-modal-title em{font-style:normal;color:var(--accent);}
-.name-modal-desc{
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.06em;
-  color:var(--text);
-  opacity:0.7;
-  line-height:1.7;
-}
-.name-modal-input{
-  width:100%;
-  padding:10px 14px;
-  background:var(--surface2);
-  border:1px solid var(--border2);
-  border-radius:8px;
-  color:var(--text);
-  font-family:'DM Mono',monospace;
-  font-size:13px;
-  outline:none;
-  transition:border-color .15s,box-shadow .15s;
-}
-.name-modal-input:focus{
-  border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(0,212,255,0.1);
-}
-.name-modal-input::placeholder{color:var(--muted);opacity:0.6;}
-.name-modal-actions{display:flex;gap:8px;justify-content:flex-end;}
-.name-modal-cancel{
-  padding:8px 18px;
-  background:transparent;
-  border:1px solid var(--border2);
-  border-radius:8px;
-  color:var(--muted);
-  font-family:'DM Mono',monospace;
-  font-size:12px;letter-spacing:0.06em;
-  cursor:pointer;transition:all .15s;
-}
-.name-modal-cancel:hover{border-color:var(--text);color:var(--text);}
-.name-modal-submit{
-  padding:8px 20px;
-  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
-  border:none;border-radius:8px;
-  color:#050810;
-  font-family:'DM Mono',monospace;
-  font-size:12px;font-weight:500;letter-spacing:0.06em;
-  cursor:pointer;transition:all .15s;
-  box-shadow:0 0 12px rgba(0,212,255,0.25);
-}
-.name-modal-submit:hover{box-shadow:0 0 20px rgba(0,212,255,0.4);}
-.name-modal-submit:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}
-.name-modal-thanks{
-  font-family:'DM Mono',monospace;
-  font-size:12px;letter-spacing:0.07em;
-  color:var(--correct);
-  text-align:center;
-  padding:4px 0 2px;
-}
 
 .adaptive-word-badge{
   display:inline-block;
@@ -2133,11 +2025,6 @@ async function initUserDoc(user) {
         sessionHistory: [],
         preferences: {}
       };
-      if (isGoogleUser(user)) {
-        userData.displayName = user.displayName || '';
-        userData.email = user.email || '';
-        userData.photoURL = user.photoURL || '';
-      }
       t.set(userRef, userData);
     });
     localUserSeconds = 0;
@@ -2147,11 +2034,7 @@ async function initUserDoc(user) {
     // Returning user — load their saved stats as the source of truth
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-      sessionCount: firebase.firestore.FieldValue.increment(1),
-      ...( isGoogleUser(user) ? {
-        displayName: user.displayName || snap.data().displayName || '',
-        photoURL: user.photoURL || snap.data().photoURL || ''
-      } : {})
+      sessionCount: firebase.firestore.FieldValue.increment(1)
     });
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
@@ -2295,11 +2178,6 @@ function signInWithGoogle() {
   doSignIn(currentUser)
     .then(result => {
       fbUser = result.user;
-      db.collection("users").doc(fbUser.uid).update({
-        displayName: fbUser.displayName || '',
-        email: fbUser.email || '',
-        photoURL: fbUser.photoURL || ''
-      }).catch(() => {});
       updateAuthUI(fbUser);
     })
     .catch(async err => {
@@ -2309,11 +2187,6 @@ function signInWithGoogle() {
           await auth.signOut();
           const result = await auth.signInWithPopup(googleProvider);
           fbUser = result.user;
-          db.collection("users").doc(fbUser.uid).update({
-            displayName: fbUser.displayName || '',
-            email: fbUser.email || '',
-            photoURL: fbUser.photoURL || ''
-          }).catch(() => {});
           updateAuthUI(fbUser);
         } catch (innerErr) {
           console.error("Sign-in after token expiry failed:", innerErr.code, innerErr.message);
