@@ -2184,7 +2184,7 @@ function signInWithGoogle() {
   };
 
   doSignIn(currentUser)
-    .then(result => {
+    .then(async result => {
       fbUser = result.user;
       // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
