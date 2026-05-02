@@ -1980,7 +1980,7 @@ auth.onAuthStateChanged(async user => {
     fbUser = user;
     // If this is a just-upgraded Google account, write the email now
     if (user.email) {
-      db.collection("users").doc(user.uid).update({ email: user.email }).catch(() => {});
+      db.collection("users").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
     }
     updateAuthUI(user);
     return;
@@ -2186,11 +2186,15 @@ function signInWithGoogle() {
   doSignIn(currentUser)
     .then(result => {
       fbUser = result.user;
+      // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
-        db.collection("users").doc(fbUser.uid).update({ email: fbUser.email })
-          .then(() => console.log("email written:", fbUser.email))
+        db.collection("users").doc(fbUser.uid)
+          .set({ email: fbUser.email }, { merge: true })
           .catch(err => console.error("email write failed:", err.code, err.message));
       }
+      // Create full user doc if it doesn't exist yet
+      try { await initUserDoc(fbUser); } catch(e) { console.error("initUserDoc:", e); }
+      startSecondTimer();
       updateAuthUI(fbUser);
     })
     .catch(async err => {
