@@ -1444,6 +1444,14 @@ let adaptiveCount=0, adaptiveScore=0, adaptiveStreak=0, adaptiveBestStreak=0;
 let adaptiveRecentWords=[], adaptiveNextReview=Math.floor(Math.random()*3)+4;
 let wordStats = {}; // { word: { seen: N, correct: N, lastSeen: timestamp } } — declared before selectLesson('adaptive') runs
 
+// ── Firebase / auth state (declared here so savePreferences() can reference
+//    fbUser safely when called from selectLesson/setTheme at startup) ──────────
+let fbUser = null;
+let secondTimer = null;
+let flushTimer = null;
+let localUserSeconds = 0;
+let localGlobalSeconds = 0;
+
 // ── New tracking state ────────────────────────────────────────────────────────
 let activityDays = [];      // ["YYYY-MM-DD", ...] — for streak calculation
 let sessionHistory = [];    // [{date, questionsAnswered, correctAnswers, duration}, ...]
@@ -2055,12 +2063,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-let fbUser = null;
-let secondTimer = null;
-let flushTimer = null;
-let localUserSeconds = 0;
-let localGlobalSeconds = 0;
 
 function fmtHMS(s) {
   const h = Math.floor(s / 3600);
