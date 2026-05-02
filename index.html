@@ -2093,7 +2093,7 @@ async function initUserDoc(user) {
         sessionCount: 1,
         wordStats: {}
       };
-      if (!user.isAnonymous) {
+      if (isGoogleUser(user)) {
         userData.displayName = user.displayName || '';
         userData.email = user.email || '';
         userData.photoURL = user.photoURL || '';
@@ -2108,7 +2108,7 @@ async function initUserDoc(user) {
     await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1),
-      ...(!user.isAnonymous ? {
+      ...( isGoogleUser(user) ? {
         displayName: user.displayName || snap.data().displayName || '',
         photoURL: user.photoURL || snap.data().photoURL || ''
       } : {})
@@ -2127,17 +2127,20 @@ const GOOGLE_SVG = `<svg width="14" height="14" viewBox="0 0 18 18" xmlns="http:
   <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
 </svg>`;
 
+function isGoogleUser(user) {
+  return !!(user && user.providerData && user.providerData.some(p => p.providerId === 'google.com'));
+}
+
 function updateAuthUI(user) {
   const signinBtn = document.getElementById('google-signin-btn');
   const badge = document.getElementById('user-badge');
 
-  if (!user || user.isAnonymous) {
+  if (!isGoogleUser(user)) {
     badge.style.display = 'none';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
     signinBtn.innerHTML = GOOGLE_SVG + 'Sign in with Google';
   } else {
-    // Google user
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
@@ -2209,8 +2212,22 @@ function signInWithGoogle() {
           updateAuthUI(auth.currentUser);
         }
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        console.warn("Google sign-in error:", err.code, err.message);
-        updateAuthUI(auth.currentUser);
+        console.error("Google sign-in error:", err.code, err.message);
+        const btn = document.getElementById('google-signin-btn');
+        btn.disabled = false;
+        if (err.code === 'auth/unauthorized-domain') {
+          btn.innerHTML = GOOGLE_SVG + 'Domain not authorized — see console';
+          console.error(
+            '%c Firebase Auth: Unauthorized Domain ',
+            'background:#c00;color:#fff;font-weight:bold;padding:2px 6px;border-radius:3px',
+            '\n\nYour site\'s domain is not in Firebase\'s authorized list.\n' +
+            'Fix: Firebase Console → Authentication → Settings → Authorized domains → Add your domain\n' +
+            '(e.g. yourusername.github.io)'
+          );
+        } else {
+          btn.innerHTML = GOOGLE_SVG + `Error: ${err.code}`;
+        }
+        setTimeout(() => updateAuthUI(auth.currentUser), 4000);
       } else {
         // User closed the popup — just reset the button
         updateAuthUI(auth.currentUser);
