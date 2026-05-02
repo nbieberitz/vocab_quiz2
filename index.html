@@ -2108,12 +2108,24 @@ function fmtHMS(s) {
 }
 
 // ── Auth state listener — handles both anon and Google users ──────────────────
+let initializedUid = null;
+
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    // No session at all — sign in anonymously
+    // No session — sign in anonymously
     auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
     return;
   }
+
+  // If UID hasn't changed (e.g. linkWithPopup just upgraded the same anon account),
+  // skip re-initializing — just update fbUser reference and the UI.
+  if (user.uid === initializedUid) {
+    fbUser = user;
+    updateAuthUI(user);
+    return;
+  }
+
+  initializedUid = user.uid;
   fbUser = user;
   await initUserDoc(user);
   startSecondTimer();
@@ -2128,7 +2140,7 @@ async function initUserDoc(user) {
   const statsSnap = await statsRef.get();
 
   if (!snap.exists) {
-    // Brand-new user (anon or Google first time) — assign a number
+    // Brand-new user — assign a number and create their doc
     await db.runTransaction(async t => {
       const ss = await t.get(statsRef);
       const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
@@ -2147,7 +2159,7 @@ async function initUserDoc(user) {
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
         sessionCount: 1,
-        wordStats: wordStats  // carry over any stats from this session
+        wordStats: {}
       };
       if (!user.isAnonymous) {
         userData.displayName = user.displayName || '';
@@ -2158,34 +2170,23 @@ async function initUserDoc(user) {
     });
     localUserSeconds = 0;
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    wordStats = {};
     if (user.isAnonymous) {
       document.querySelector('.opt-data-btn').style.display = '';
     }
   } else {
-    // Returning user — load their saved data
-    const savedStats = snap.data().wordStats || {};
-    // Merge current-session wordStats into saved (in case there were answers before login)
-    for (const [word, stat] of Object.entries(wordStats)) {
-      if (savedStats[word]) {
-        savedStats[word].seen += stat.seen;
-        savedStats[word].correct += stat.correct;
-      } else {
-        savedStats[word] = stat;
-      }
-    }
-    wordStats = savedStats;
-    const updateData = {
+    // Returning user — load their saved stats as the source of truth
+    await userRef.update({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1),
-      wordStats: wordStats
-    };
-    if (!user.isAnonymous) {
-      updateData.displayName = user.displayName || snap.data().displayName || '';
-      updateData.photoURL = user.photoURL || snap.data().photoURL || '';
-    }
-    await userRef.update(updateData);
-    localUserSeconds = parseHMS(snap.data().totalTime);
+      ...(!user.isAnonymous ? {
+        displayName: user.displayName || snap.data().displayName || '',
+        photoURL: user.photoURL || snap.data().photoURL || ''
+      } : {})
+    });
+    localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    wordStats = snap.data().wordStats || {};
     if (user.isAnonymous && !snap.data().displayName) {
       document.querySelector('.opt-data-btn').style.display = '';
     }
