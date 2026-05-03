@@ -2036,7 +2036,6 @@ auth.onAuthStateChanged(async user => {
     console.error("initUserDoc error:", err);
   }
   startSecondTimer();
-  syncGlobalStats(); // initial accurate read on page load
   updateAuthUI(user);
 });
 
@@ -2573,9 +2572,7 @@ function startSecondTimer() {
       localGlobalSeconds++;
     }
   }, 1000);
-  // Flush this user's seconds (and increment stats/global/totalSeconds atomically),
-  // then immediately derive totalTime from the stored totalSeconds. Sequencing
-  // guarantees the just-flushed seconds are already in stats/global before we read it.
+  // Flush user seconds and update stats/global in one atomic write (no read needed).
   flushTimer = setInterval(async () => {
     await flushTime();
     syncGlobalStats();
@@ -2615,14 +2612,16 @@ function flushTime() {
   }
 
   if (elapsed > 0) {
-    // totalTime is derived from localUserSeconds directly — no round-trip read needed.
-    // The old approach (increment → get → update) meant the totalTime write never landed
-    // on page close/refresh because the browser killed the tab before the chain finished.
     const fmt = fmtHMS(localUserSeconds);
-    // Atomically increment stats/global/totalSeconds so any authenticated user
-    // (including anonymous) can contribute without needing to read other users' docs.
-    // totalTime is derived purely from totalSeconds by syncGlobalStats — never written here.
-    statsRef.set({ totalSeconds: FV.increment(elapsed) }, { merge: true }).catch(() => {});
+    // localGlobalSeconds is already kept in sync by the per-second timer.
+    // Write totalSeconds (server-side atomic increment) and totalTime together so
+    // no separate read of stats/global is ever needed — avoiding security-rule
+    // issues that block anonymous users from reading that doc.
+    // totalTime is derived purely from localGlobalSeconds, which mirrors totalSeconds.
+    statsRef.set({
+      totalSeconds: FV.increment(elapsed),
+      totalTime: fmtHMS(localGlobalSeconds)
+    }, { merge: true }).catch(() => {});
     return Promise.all([
       userRef.update({
         userSeconds: FV.increment(elapsed),
@@ -2637,16 +2636,13 @@ function flushTime() {
   return Promise.resolve();
 }
 
-// Reads stats/global/totalSeconds (maintained via atomic increments in flushTime)
-// and writes totalTime as "HH:MM:SS". totalTime is purely derived from totalSeconds.
-// Does NOT scan the userData collection — anonymous users can't list other users' docs.
+// No reads needed — totalSeconds is maintained via atomic increments in flushTime.
+// This just re-derives totalTime from localGlobalSeconds, which the per-second timer
+// keeps in sync, so anonymous users never hit a security-rule read block.
 async function syncGlobalStats() {
   try {
-    const snap = await db.collection("stats").doc("global").get();
-    const total = snap.exists ? (snap.data().totalSeconds || 0) : 0;
-    localGlobalSeconds = total;
     await db.collection("stats").doc("global").set({
-      totalTime: fmtHMS(total)
+      totalTime: fmtHMS(localGlobalSeconds)
     }, { merge: true });
   } catch (err) {
     console.warn("syncGlobalStats error:", err);
