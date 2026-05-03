@@ -2268,6 +2268,12 @@ function signInWithGoogle() {
           // suppressAnon prevents onAuthStateChanged from creating a new anon user during the gap.
           suppressAnon = true;
           const anonUid = anonUser && anonUser.isAnonymous ? anonUser.uid : null;
+          // Delete the anon Firestore doc FIRST, while the anon user is still
+          // authenticated — security rules allow this. After delete() is called
+          // the anon Auth session is gone and the delete would be rejected.
+          if (anonUid) {
+            await db.collection("users").doc(anonUid).delete().catch(() => {});
+          }
           if (anonUser && anonUser.isAnonymous) {
             await anonUser.delete().catch(() => auth.signOut());
           }
@@ -2278,11 +2284,6 @@ function signInWithGoogle() {
           suppressAnon = false;
           fbUser = result.user;
           const userRef = db.collection("users").doc(fbUser.uid);
-
-          // Delete the anonymous user's Firestore doc now that we have the Google UID
-          if (anonUid && anonUid !== fbUser.uid) {
-            db.collection("users").doc(anonUid).delete().catch(() => {});
-          }
 
           const snap = await userRef.get();
           const saved = snap.exists ? snap.data() : {};
