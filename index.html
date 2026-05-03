@@ -2323,9 +2323,14 @@ function signInWithGoogle() {
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
             ...(fbUser.email ? { email: fbUser.email } : {})
           }, { merge: true });
+          // Sync globals to the merged values — flushTime() and endSession() write
+          // from these, so they must reflect the full merged state, not just anon data.
+          activityDays = savedDays;
+          sessionHistory = mergedSessions;
           startSecondTimer();
           updateAuthUI(fbUser);
         } catch (innerErr) {
+          suppressAnon = false; // ensure anon sign-in is never permanently blocked
           console.warn("Merge error:", innerErr);
           updateAuthUI(auth.currentUser);
         }
@@ -2354,12 +2359,13 @@ function signInWithGoogle() {
     });
 }
 
-function signOutGoogle() {
+async function signOutGoogle() {
   signingOut = true;
   stopTimers();
   flushTime();
   endSession();
-  auth.signOut().catch(err => console.warn("Sign-out error:", err));
+
+  // Reset all local state before the new anon session starts
   fbUser = null;
   initializedUid = null;
   wordStats = {};
@@ -2368,7 +2374,19 @@ function signOutGoogle() {
   sessionStartTime = null;
   sessionQuestionsAnswered = 0;
   sessionCorrectAnswers = 0;
+  cachedGoogleProfile = null;
   updateAuthUI(null);
+
+  try {
+    await auth.signOut();
+  } catch (err) {
+    console.warn("Sign-out error:", err);
+  }
+
+  // Sign-out is complete — safe to create a fresh anonymous session.
+  // onAuthStateChanged will fire with the new anon user → initUserDoc → new Firestore doc.
+  signingOut = false;
+  auth.signInAnonymously().catch(err => console.warn("Post-logout anon auth error:", err));
 }
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
@@ -2437,6 +2455,7 @@ function stopTimers() {
   clearInterval(syncTimer);
   secondTimer = null;
   flushTimer = null;
+  syncTimer = null;
 }
 
 function flushTime() {
