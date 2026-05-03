@@ -2082,6 +2082,7 @@ async function initUserDoc(user) {
       await userRef.set({
         firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        userSeconds: 0,
         totalTime: "00:00:00",
         totalQuestionsAnswered: 0,
         totalCorrectAnswers: 0,
@@ -2111,6 +2112,7 @@ async function initUserDoc(user) {
           userNumber,
           firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
           lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+          userSeconds: 0,
           totalTime: "00:00:00",
           totalQuestionsAnswered: 0,
           totalCorrectAnswers: 0,
@@ -2125,6 +2127,7 @@ async function initUserDoc(user) {
         t.set(summaryRef, {
           ...(user.email ? { email: user.email } : {}),
           sessionCount: 1,
+          userSeconds: 0,
           totalTime: "00:00:00",
           totalQuestionsAnswered: 0,
           totalCorrectAnswers: 0
@@ -2156,6 +2159,7 @@ async function initUserDoc(user) {
         t.set(summaryRef, {
           email: user.email,
           sessionCount: (snap.data().sessionCount || 0) + 1,
+          userSeconds: snap.data().userSeconds || 0,
           totalTime: snap.data().totalTime || "00:00:00",
           totalQuestionsAnswered: snap.data().totalQuestionsAnswered || 0,
           totalCorrectAnswers: snap.data().totalCorrectAnswers || 0
@@ -2173,7 +2177,7 @@ async function initUserDoc(user) {
         ...(user.email ? { email: user.email } : {})
       }, { merge: true });
     }
-    localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
+    localUserSeconds = snap.data().userSeconds || parseHMS(snap.data().totalTime || "00:00:00");
     lastFlushUserSeconds = localUserSeconds;
     wordStats = snap.data().wordStats || {};
     activityDays = snap.data().activityDays || [];
@@ -2397,7 +2401,7 @@ function signInWithGoogle() {
             }
           }
           wordStats = savedStats;
-          const savedSeconds = snap.exists ? parseHMS(saved.totalTime || "00:00:00") : 0;
+          const savedSeconds = saved.userSeconds || parseHMS(saved.totalTime || "00:00:00");
           localUserSeconds = savedSeconds + localSeconds;
 
           // Merge activityDays
@@ -2414,6 +2418,7 @@ function signInWithGoogle() {
 
           await userRef.set({
             wordStats,
+            userSeconds: localUserSeconds,
             totalTime: fmtHMS(localUserSeconds),
             activityDays: savedDays,
             sessionHistory: mergedSessions,
@@ -2425,6 +2430,7 @@ function signInWithGoogle() {
           await db.collection("users").doc(fbUser.uid).set({
             ...(fbUser.email ? { email: fbUser.email } : {}),
             sessionCount: firebase.firestore.FieldValue.increment(1),
+            userSeconds: localUserSeconds,
             totalTime: fmtHMS(localUserSeconds),
             totalQuestionsAnswered: savedQ + sessionQuestionsAnswered,
             totalCorrectAnswers: savedC + sessionCorrectAnswers
@@ -2519,8 +2525,8 @@ async function syncFromFirestore() {
     // Sync activity days (union of local + remote)
     const remoteDays = data.activityDays || [];
     remoteDays.forEach(d => { if (!activityDays.includes(d)) activityDays.push(d); });
-    // Sync time — take whichever is higher
-    const remoteSeconds = parseHMS(data.totalTime || "00:00:00");
+    // Sync time — take whichever is higher (userSeconds is source of truth; totalTime is display-only)
+    const remoteSeconds = data.userSeconds || parseHMS(data.totalTime || "00:00:00");
     if (remoteSeconds > localUserSeconds) localUserSeconds = remoteSeconds;
     // Refresh heatmap if it's open
     const heatmapOpen = document.getElementById('heatmap-overlay').style.display === 'block';
@@ -2567,14 +2573,26 @@ function flushTime() {
   if (!fbUser) return;
   const elapsed = localUserSeconds - lastFlushUserSeconds;
   lastFlushUserSeconds = localUserSeconds;
-  db.collection("userData").doc(fbUser.uid).set({
-    totalTime: fmtHMS(localUserSeconds),
-    wordStats: wordStats,
-    activityDays: activityDays
-  }, { merge: true });
-  db.collection("users").doc(fbUser.uid).set({
-    totalTime: fmtHMS(localUserSeconds)
-  }, { merge: true });
+  const userRef = db.collection("userData").doc(fbUser.uid);
+  const summaryRef = db.collection("users").doc(fbUser.uid);
+  if (elapsed > 0) {
+    userRef.set({
+      userSeconds: firebase.firestore.FieldValue.increment(elapsed),
+      wordStats: wordStats,
+      activityDays: activityDays
+    }, { merge: true }).then(() => {
+      userRef.get().then(snap => {
+        if (snap.exists) {
+          const secs = snap.data().userSeconds || 0;
+          const fmt = fmtHMS(secs);
+          userRef.set({ totalTime: fmt }, { merge: true });
+          summaryRef.set({ userSeconds: secs, totalTime: fmt }, { merge: true });
+        }
+      });
+    });
+  } else {
+    userRef.set({ wordStats: wordStats, activityDays: activityDays }, { merge: true });
+  }
   if (elapsed > 0) {
     const globalRef = db.collection("stats").doc("global");
     globalRef.set({
