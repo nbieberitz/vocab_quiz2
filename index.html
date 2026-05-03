@@ -1377,6 +1377,7 @@ let syncTimer = null;
 let globalSyncTimer = null;
 let localUserSeconds = 0;
 let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
+let localGlobalSeconds = 0;  // seeded from the full userData sum; incremented every second for real-time global writes
 let lastActivityTime = Date.now(); // updated on any user input — drives AFK detection
 let isAFK = false;                 // true while the user has been idle for 5+ minutes
 const AFK_MS = 5 * 60 * 1000;     // 5 minutes in milliseconds
@@ -2047,6 +2048,7 @@ async function initUserDoc(user) {
   const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
   const statsSnap = await statsRef.get();
+  localGlobalSeconds = statsSnap.exists ? (statsSnap.data().totalSeconds || 0) : 0;
 
   if (!snap.exists) {
     // Check if this user has legacy data in the old "users" collection (schema migration case)
@@ -2569,6 +2571,13 @@ function startSecondTimer() {
     } else {
       isAFK = false;
       localUserSeconds++;
+      localGlobalSeconds++;
+      if (fbUser) {
+        db.collection("stats").doc("global").set({
+          totalSeconds: localGlobalSeconds,
+          totalTime: fmtHMS(localGlobalSeconds)
+        }, { merge: true });
+      }
     }
   }, 1000);
   flushTimer = setInterval(() => {
@@ -2636,6 +2645,8 @@ async function syncGlobalStats() {
     const snap = await db.collection("userData").get();
     let total = 0;
     snap.forEach(doc => { total += doc.data().userSeconds || 0; });
+    // Reseed the local counter so per-second writes stay accurate after other users' time is counted.
+    localGlobalSeconds = total;
     await db.collection("stats").doc("global").set({
       totalSeconds: total,
       totalTime: fmtHMS(total)
