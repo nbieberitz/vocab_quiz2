@@ -2017,6 +2017,7 @@ auth.onAuthStateChanged(async user => {
     fbUser = user;
     // If this is a just-upgraded Google account, write the email now
     if (user.email) {
+      db.collection("individual user data").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
       db.collection("users").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
     }
     updateAuthUI(user);
@@ -2036,7 +2037,8 @@ auth.onAuthStateChanged(async user => {
 
 async function initUserDoc(user) {
   const uid = user.uid;
-  const userRef = db.collection("users").doc(uid);
+  const userRef = db.collection("individual user data").doc(uid);
+  const summaryRef = db.collection("users").doc(uid);
   const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
   const statsSnap = await statsRef.get();
@@ -2068,6 +2070,13 @@ async function initUserDoc(user) {
         ...(user.email ? { email: user.email } : {})
       };
       t.set(userRef, userData);
+      t.set(summaryRef, {
+        ...(user.email ? { email: user.email } : {}),
+        sessionCount: 1,
+        totalTime: "00:00:00",
+        totalQuestionsAnswered: 0,
+        totalCorrectAnswers: 0
+      });
     });
     localUserSeconds = 0;
     localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
@@ -2076,6 +2085,10 @@ async function initUserDoc(user) {
     // Returning user — load their saved stats as the source of truth
     await userRef.set({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+      sessionCount: firebase.firestore.FieldValue.increment(1),
+      ...(user.email ? { email: user.email } : {})
+    }, { merge: true });
+    await summaryRef.set({
       sessionCount: firebase.firestore.FieldValue.increment(1),
       ...(user.email ? { email: user.email } : {})
     }, { merge: true });
@@ -2100,7 +2113,7 @@ async function initUserDoc(user) {
 // ── Preference sync ───────────────────────────────────────────────────────────
 function savePreferences() {
   if (!fbUser) return;
-  db.collection("users").doc(fbUser.uid).set({
+  db.collection("individual user data").doc(fbUser.uid).set({
     preferences: {
       theme: localStorage.getItem('vocab_theme') || 'dark',
       mode: mode,
@@ -2236,9 +2249,12 @@ function signInWithGoogle() {
       }
       // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
-        db.collection("users").doc(fbUser.uid)
+        db.collection("individual user data").doc(fbUser.uid)
           .set({ email: fbUser.email }, { merge: true })
           .catch(err => console.error("email write failed:", err.code, err.message));
+        db.collection("users").doc(fbUser.uid)
+          .set({ email: fbUser.email }, { merge: true })
+          .catch(err => console.error("email summary write failed:", err.code, err.message));
       }
       // Create full user doc if it doesn't exist yet
       try { await initUserDoc(fbUser); } catch(e) { console.error("initUserDoc:", e); }
@@ -2272,6 +2288,7 @@ function signInWithGoogle() {
           // authenticated — security rules allow this. After delete() is called
           // the anon Auth session is gone and the delete would be rejected.
           if (anonUid) {
+            await db.collection("individual user data").doc(anonUid).delete().catch(() => {});
             await db.collection("users").doc(anonUid).delete().catch(() => {});
           }
           if (anonUser && anonUser.isAnonymous) {
@@ -2283,7 +2300,7 @@ function signInWithGoogle() {
             : await auth.signInWithPopup(googleProvider);
           suppressAnon = false;
           fbUser = result.user;
-          const userRef = db.collection("users").doc(fbUser.uid);
+          const userRef = db.collection("individual user data").doc(fbUser.uid);
 
           const snap = await userRef.get();
           const saved = snap.exists ? snap.data() : {};
@@ -2322,6 +2339,13 @@ function signInWithGoogle() {
             totalCorrectAnswers: savedC + sessionCorrectAnswers,
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
             ...(fbUser.email ? { email: fbUser.email } : {})
+          }, { merge: true });
+          await db.collection("users").doc(fbUser.uid).set({
+            ...(fbUser.email ? { email: fbUser.email } : {}),
+            sessionCount: firebase.firestore.FieldValue.increment(1),
+            totalTime: fmtHMS(localUserSeconds),
+            totalQuestionsAnswered: savedQ + sessionQuestionsAnswered,
+            totalCorrectAnswers: savedC + sessionCorrectAnswers
           }, { merge: true });
           // Sync globals to the merged values — flushTime() and endSession() write
           // from these, so they must reflect the full merged state, not just anon data.
@@ -2400,7 +2424,7 @@ function parseHMS(str) {
 async function syncFromFirestore() {
   if (!fbUser) return;
   try {
-    const snap = await db.collection("users").doc(fbUser.uid).get();
+    const snap = await db.collection("individual user data").doc(fbUser.uid).get();
     if (!snap.exists) return;
     const data = snap.data();
     // Merge remote wordStats — take the higher seen/correct count per word
@@ -2460,10 +2484,13 @@ function stopTimers() {
 
 function flushTime() {
   if (!fbUser) return;
-  db.collection("users").doc(fbUser.uid).set({
+  db.collection("individual user data").doc(fbUser.uid).set({
     totalTime: fmtHMS(localUserSeconds),
     wordStats: wordStats,
     activityDays: activityDays
+  }, { merge: true });
+  db.collection("users").doc(fbUser.uid).set({
+    totalTime: fmtHMS(localUserSeconds)
   }, { merge: true });
   db.collection("stats").doc("global").set({ totalTime: fmtHMS(localGlobalSeconds) }, { merge: true });
 }
@@ -2485,9 +2512,13 @@ function trackAnswer(isRight, word) {
   if (isRight) sessionCorrectAnswers++;
 
   const inc1 = firebase.firestore.FieldValue.increment(1);
-  db.collection("users").doc(fbUser.uid).set({
+  db.collection("individual user data").doc(fbUser.uid).set({
     totalQuestionsAnswered: inc1,
     wordStats: wordStats,
+    ...(isRight ? { totalCorrectAnswers: inc1 } : {})
+  }, { merge: true });
+  db.collection("users").doc(fbUser.uid).set({
+    totalQuestionsAnswered: inc1,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
   }, { merge: true });
   db.collection("stats").doc("global").set({
@@ -2508,7 +2539,7 @@ function endSession() {
   };
   const updated = [...sessionHistory, record].slice(-50); // keep last 50 sessions
   sessionHistory = updated;
-  db.collection("users").doc(fbUser.uid).set({
+  db.collection("individual user data").doc(fbUser.uid).set({
     sessionHistory: updated
   }, { merge: true }).catch(() => {});
   // Reset so duplicate calls don't double-record
