@@ -2044,45 +2044,79 @@ async function initUserDoc(user) {
   const statsSnap = await statsRef.get();
 
   if (!snap.exists) {
-    // Brand-new user — assign a number and create their doc
-    await db.runTransaction(async t => {
-      const ss = await t.get(statsRef);
-      const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
-      const userNumber = count + 1;
-      t.set(statsRef, {
-        totalUsers: userNumber,
-        totalTime: "00:00:00",
-        totalQuestionsAnswered: 0,
-        totalCorrectAnswers: 0
-      }, { merge: true });
-      const userData = {
-        userNumber,
-        firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
+    // Check if this user has legacy data in the old "users" collection (schema migration case)
+    const legacySnap = await summaryRef.get();
+    const isLegacy = legacySnap.exists &&
+      (legacySnap.data().wordStats !== undefined || legacySnap.data().userNumber !== undefined);
+
+    if (isLegacy) {
+      // ── Migration: copy full data → "individual user data", trim "users" to summary ──
+      const old = legacySnap.data();
+      await userRef.set({
+        ...old,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        totalTime: "00:00:00",
-        totalQuestionsAnswered: 0,
-        totalCorrectAnswers: 0,
-        sessionCount: 1,
-        wordStats: {},
-        activityDays: [],
-        sessionHistory: [],
-        preferences: {},
-        ...(user.email ? { email: user.email } : {})
-      };
-      t.set(userRef, userData);
-      t.set(summaryRef, {
-        ...(user.email ? { email: user.email } : {}),
-        sessionCount: 1,
-        totalTime: "00:00:00",
-        totalQuestionsAnswered: 0,
-        totalCorrectAnswers: 0
+        sessionCount: firebase.firestore.FieldValue.increment(1)
       });
-    });
-    localUserSeconds = 0;
-    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
-    wordStats = {};
+      // Replace "users" doc entirely with only the 5 summary fields
+      const resolvedEmail = old.email || (user.email || null);
+      await summaryRef.set({
+        ...(resolvedEmail ? { email: resolvedEmail } : {}),
+        sessionCount: (old.sessionCount || 0) + 1,
+        totalTime: old.totalTime || "00:00:00",
+        totalQuestionsAnswered: old.totalQuestionsAnswered || 0,
+        totalCorrectAnswers: old.totalCorrectAnswers || 0
+      });
+      localUserSeconds = parseHMS(old.totalTime || "00:00:00");
+      localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+      wordStats = old.wordStats || {};
+      activityDays = old.activityDays || [];
+      sessionHistory = old.sessionHistory || [];
+      try {
+        applyPreferences(old.preferences || {});
+      } catch (err) {
+        console.warn("applyPreferences error:", err);
+      }
+    } else {
+      // Brand-new user — assign a number and create their doc
+      await db.runTransaction(async t => {
+        const ss = await t.get(statsRef);
+        const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
+        const userNumber = count + 1;
+        t.set(statsRef, {
+          totalUsers: userNumber,
+          totalTime: "00:00:00",
+          totalQuestionsAnswered: 0,
+          totalCorrectAnswers: 0
+        }, { merge: true });
+        const userData = {
+          userNumber,
+          firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+          totalTime: "00:00:00",
+          totalQuestionsAnswered: 0,
+          totalCorrectAnswers: 0,
+          sessionCount: 1,
+          wordStats: {},
+          activityDays: [],
+          sessionHistory: [],
+          preferences: {},
+          ...(user.email ? { email: user.email } : {})
+        };
+        t.set(userRef, userData);
+        t.set(summaryRef, {
+          ...(user.email ? { email: user.email } : {}),
+          sessionCount: 1,
+          totalTime: "00:00:00",
+          totalQuestionsAnswered: 0,
+          totalCorrectAnswers: 0
+        });
+      });
+      localUserSeconds = 0;
+      localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+      wordStats = {};
+    }
   } else {
-    // Returning user — load their saved stats as the source of truth
+    // Returning user — doc already exists in "individual user data"
     await userRef.set({
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       sessionCount: firebase.firestore.FieldValue.increment(1),
