@@ -2002,6 +2002,7 @@ function fmtHMS(s) {
 let initializedUid = null;
 let signingOut = false;
 let suppressAnon = false;
+let cachedGoogleProfile = null;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
@@ -2195,11 +2196,18 @@ function updateAuthUI(user) {
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     if (syncBtn) syncBtn.style.display = '';
-    const firstName = (user.displayName || user.email || 'Signed in').split(' ')[0];
+    const googleData = user.providerData && user.providerData.find(p => p.providerId === 'google.com');
+    const displayName = (cachedGoogleProfile && cachedGoogleProfile.name)
+      || (googleData && googleData.displayName)
+      || user.displayName;
+    const photoURL = (cachedGoogleProfile && cachedGoogleProfile.picture)
+      || (googleData && googleData.photoURL)
+      || user.photoURL;
+    const firstName = (displayName || user.email || 'Signed in').split(' ')[0];
     document.getElementById('user-display-name').textContent = firstName;
     const avatar = document.getElementById('user-avatar');
-    if (user.photoURL) {
-      avatar.src = user.photoURL;
+    if (photoURL) {
+      avatar.src = photoURL;
       avatar.style.display = '';
     } else {
       avatar.style.display = 'none';
@@ -2225,6 +2233,9 @@ function signInWithGoogle() {
   doSignIn(currentUser)
     .then(async result => {
       fbUser = result.user;
+      if (result.additionalUserInfo && result.additionalUserInfo.profile) {
+        cachedGoogleProfile = result.additionalUserInfo.profile;
+      }
       // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
         db.collection("users").doc(fbUser.uid)
