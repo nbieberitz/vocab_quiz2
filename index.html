@@ -2572,12 +2572,6 @@ function startSecondTimer() {
       isAFK = false;
       localUserSeconds++;
       localGlobalSeconds++;
-      if (fbUser) {
-        db.collection("stats").doc("global").set({
-          totalSeconds: localGlobalSeconds,
-          totalTime: fmtHMS(localGlobalSeconds)
-        }, { merge: true });
-      }
     }
   }, 1000);
   flushTimer = setInterval(() => {
