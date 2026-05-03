@@ -1377,6 +1377,9 @@ let syncTimer = null;
 let globalSyncTimer = null;
 let localUserSeconds = 0;
 let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
+let lastActivityTime = Date.now(); // updated on any user input — drives AFK detection
+let isAFK = false;                 // true while the user has been idle for 5+ minutes
+const AFK_MS = 5 * 60 * 1000;     // 5 minutes in milliseconds
 
 // ── New tracking state ────────────────────────────────────────────────────────
 let activityDays = [];      // ["YYYY-MM-DD", ...] — for streak calculation
@@ -2554,7 +2557,19 @@ async function manualSync(btn) {
 function startSecondTimer() {
   stopTimers();
   secondTimer = setInterval(() => {
-    localUserSeconds++;
+    if (Date.now() - lastActivityTime >= AFK_MS) {
+      if (!isAFK) {
+        // Just crossed the 5-minute idle threshold — subtract those 5 minutes and pause counting.
+        isAFK = true;
+        localUserSeconds = Math.max(0, localUserSeconds - 300);
+        // Pull lastFlushUserSeconds back too so the next elapsed calculation stays correct.
+        if (lastFlushUserSeconds > localUserSeconds) lastFlushUserSeconds = localUserSeconds;
+      }
+      // Don't increment while AFK — just wait.
+    } else {
+      isAFK = false;
+      localUserSeconds++;
+    }
   }, 1000);
   flushTimer = setInterval(() => {
     flushTime();
@@ -2689,12 +2704,23 @@ function endSession() {
   sessionCorrectAnswers = 0;
 }
 
+// Reset AFK state on any user input. The secondTimer picks this up on its next tick.
+function onUserActivity() {
+  lastActivityTime = Date.now();
+  isAFK = false;
+}
+['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
+  window.addEventListener(evt, onUserActivity, { passive: true });
+});
+
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     stopTimers();
     flushTime();
     endSession();
   } else {
+    // Returning to the tab counts as activity — don't penalise time spent in another tab.
+    onUserActivity();
     startSecondTimer();
   }
 });
