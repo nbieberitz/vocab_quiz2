@@ -1374,6 +1374,7 @@ let fbUser = null;
 let secondTimer = null;
 let flushTimer = null;
 let syncTimer = null;
+let globalSyncTimer = null;
 let localUserSeconds = 0;
 let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
 
@@ -2032,6 +2033,7 @@ auth.onAuthStateChanged(async user => {
     console.error("initUserDoc error:", err);
   }
   startSecondTimer();
+  syncGlobalStats(); // initial accurate read on page load
   updateAuthUI(user);
 });
 
@@ -2560,15 +2562,20 @@ function startSecondTimer() {
   syncTimer = setInterval(() => {
     syncFromFirestore();
   }, 60000);
+  globalSyncTimer = setInterval(() => {
+    syncGlobalStats();
+  }, 60000);
 }
 
 function stopTimers() {
   clearInterval(secondTimer);
   clearInterval(flushTimer);
   clearInterval(syncTimer);
+  clearInterval(globalSyncTimer);
   secondTimer = null;
   flushTimer = null;
   syncTimer = null;
+  globalSyncTimer = null;
 }
 
 function flushTime() {
@@ -2605,12 +2612,21 @@ function flushTime() {
     userRef.update(wordUpdates);
   }
 
-  if (elapsed > 0) {
-    // totalTime can't be computed exactly without reading the global counter first,
-    // but that async chain never survives a page close. Drop it from the global doc —
-    // derive it from totalSeconds at read time instead.
-    const globalRef = db.collection("stats").doc("global");
-    globalRef.set({ totalSeconds: FV.increment(elapsed) }, { merge: true });
+}
+
+// Reads every userData doc, sums userSeconds across all users, and writes the
+// accurate totalSeconds + totalTime to stats/global. Runs once per minute.
+async function syncGlobalStats() {
+  try {
+    const snap = await db.collection("userData").get();
+    let total = 0;
+    snap.forEach(doc => { total += doc.data().userSeconds || 0; });
+    await db.collection("stats").doc("global").set({
+      totalSeconds: total,
+      totalTime: fmtHMS(total)
+    }, { merge: true });
+  } catch (err) {
+    console.warn("syncGlobalStats error:", err);
   }
 }
 
