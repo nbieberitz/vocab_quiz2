@@ -2267,6 +2267,7 @@ function signInWithGoogle() {
           // sees a current user and attempts linking again, causing the same error.
           // suppressAnon prevents onAuthStateChanged from creating a new anon user during the gap.
           suppressAnon = true;
+          const anonUid = anonUser && anonUser.isAnonymous ? anonUser.uid : null;
           if (anonUser && anonUser.isAnonymous) {
             await anonUser.delete().catch(() => auth.signOut());
           }
@@ -2277,8 +2278,15 @@ function signInWithGoogle() {
           suppressAnon = false;
           fbUser = result.user;
           const userRef = db.collection("users").doc(fbUser.uid);
+
+          // Delete the anonymous user's Firestore doc now that we have the Google UID
+          if (anonUid && anonUid !== fbUser.uid) {
+            db.collection("users").doc(anonUid).delete().catch(() => {});
+          }
+
           const snap = await userRef.get();
-          const savedStats = snap.exists ? (snap.data().wordStats || {}) : {};
+          const saved = snap.exists ? snap.data() : {};
+          const savedStats = saved.wordStats || {};
           for (const [word, stat] of Object.entries(localStats)) {
             if (savedStats[word]) {
               savedStats[word].seen += stat.seen;
@@ -2289,11 +2297,28 @@ function signInWithGoogle() {
             }
           }
           wordStats = savedStats;
-          const savedSeconds = snap.exists ? parseHMS(snap.data().totalTime || "00:00:00") : 0;
+          const savedSeconds = snap.exists ? parseHMS(saved.totalTime || "00:00:00") : 0;
           localUserSeconds = savedSeconds + localSeconds;
+
+          // Merge activityDays
+          const savedDays = saved.activityDays || [];
+          activityDays.forEach(d => { if (!savedDays.includes(d)) savedDays.push(d); });
+
+          // Merge sessionHistory (keep last 50)
+          const savedSessions = saved.sessionHistory || [];
+          const mergedSessions = [...savedSessions, ...sessionHistory].slice(-50);
+
+          // Merge question counters
+          const savedQ = saved.totalQuestionsAnswered || 0;
+          const savedC = saved.totalCorrectAnswers || 0;
+
           await userRef.set({
             wordStats,
             totalTime: fmtHMS(localUserSeconds),
+            activityDays: savedDays,
+            sessionHistory: mergedSessions,
+            totalQuestionsAnswered: savedQ + sessionQuestionsAnswered,
+            totalCorrectAnswers: savedC + sessionCorrectAnswers,
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
             ...(fbUser.email ? { email: fbUser.email } : {})
           }, { merge: true });
