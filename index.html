@@ -2528,9 +2528,16 @@ function flushTime() {
     totalTime: fmtHMS(localUserSeconds)
   }, { merge: true });
   if (elapsed > 0) {
-    db.collection("stats").doc("global").set({
+    const globalRef = db.collection("stats").doc("global");
+    globalRef.set({
       totalSeconds: firebase.firestore.FieldValue.increment(elapsed)
-    }, { merge: true });
+    }, { merge: true }).then(() => {
+      globalRef.get().then(snap => {
+        if (snap.exists) {
+          globalRef.set({ totalTime: fmtHMS(snap.data().totalSeconds || 0) }, { merge: true });
+        }
+      });
+    });
   }
 }
 
