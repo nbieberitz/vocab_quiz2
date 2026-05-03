@@ -2573,8 +2573,9 @@ function startSecondTimer() {
       localGlobalSeconds++;
     }
   }, 1000);
-  // Flush this user's seconds first, then read all users to compute the global total.
-  // Sequencing guarantees the just-flushed seconds are included in stats/global/totalSeconds.
+  // Flush this user's seconds (and increment stats/global/totalSeconds atomically),
+  // then immediately derive totalTime from the stored totalSeconds. Sequencing
+  // guarantees the just-flushed seconds are already in stats/global before we read it.
   flushTimer = setInterval(async () => {
     await flushTime();
     syncGlobalStats();
@@ -2599,6 +2600,7 @@ function flushTime() {
   lastFlushUserSeconds = localUserSeconds;
   const userRef = db.collection("userData").doc(fbUser.uid);
   const summaryRef = db.collection("users").doc(fbUser.uid);
+  const statsRef = db.collection("stats").doc("global");
   const FV = firebase.firestore.FieldValue;
 
   // Dot-notation keys update individual word entries instead of replacing the whole map,
@@ -2617,6 +2619,10 @@ function flushTime() {
     // The old approach (increment → get → update) meant the totalTime write never landed
     // on page close/refresh because the browser killed the tab before the chain finished.
     const fmt = fmtHMS(localUserSeconds);
+    // Atomically increment stats/global/totalSeconds so any authenticated user
+    // (including anonymous) can contribute without needing to read other users' docs.
+    // totalTime is derived purely from totalSeconds by syncGlobalStats — never written here.
+    statsRef.set({ totalSeconds: FV.increment(elapsed) }, { merge: true }).catch(() => {});
     return Promise.all([
       userRef.update({
         userSeconds: FV.increment(elapsed),
@@ -2631,17 +2637,15 @@ function flushTime() {
   return Promise.resolve();
 }
 
-// Reads every userData doc, sums userSeconds across all users, and writes the
-// accurate totalSeconds + totalTime to stats/global. Runs once per minute.
+// Reads stats/global/totalSeconds (maintained via atomic increments in flushTime)
+// and writes totalTime as "HH:MM:SS". totalTime is purely derived from totalSeconds.
+// Does NOT scan the userData collection — anonymous users can't list other users' docs.
 async function syncGlobalStats() {
   try {
-    const snap = await db.collection("userData").get();
-    let total = 0;
-    snap.forEach(doc => { total += doc.data().userSeconds || 0; });
-    // Reseed the local counter so per-second writes stay accurate after other users' time is counted.
+    const snap = await db.collection("stats").doc("global").get();
+    const total = snap.exists ? (snap.data().totalSeconds || 0) : 0;
     localGlobalSeconds = total;
     await db.collection("stats").doc("global").set({
-      totalSeconds: total,
       totalTime: fmtHMS(total)
     }, { merge: true });
   } catch (err) {
