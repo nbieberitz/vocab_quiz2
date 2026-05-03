@@ -1374,7 +1374,6 @@ let fbUser = null;
 let secondTimer = null;
 let flushTimer = null;
 let syncTimer = null;
-let globalSyncTimer = null;
 let localUserSeconds = 0;
 let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
 let localGlobalSeconds = 0;  // seeded from the full userData sum; incremented every second for real-time global writes
@@ -2574,14 +2573,14 @@ function startSecondTimer() {
       localGlobalSeconds++;
     }
   }, 1000);
-  flushTimer = setInterval(() => {
-    flushTime();
+  // Flush this user's seconds first, then read all users to compute the global total.
+  // Sequencing guarantees the just-flushed seconds are included in stats/global/totalSeconds.
+  flushTimer = setInterval(async () => {
+    await flushTime();
+    syncGlobalStats();
   }, 60000);
   syncTimer = setInterval(() => {
     syncFromFirestore();
-  }, 60000);
-  globalSyncTimer = setInterval(() => {
-    syncGlobalStats();
   }, 60000);
 }
 
@@ -2589,15 +2588,13 @@ function stopTimers() {
   clearInterval(secondTimer);
   clearInterval(flushTimer);
   clearInterval(syncTimer);
-  clearInterval(globalSyncTimer);
   secondTimer = null;
   flushTimer = null;
   syncTimer = null;
-  globalSyncTimer = null;
 }
 
 function flushTime() {
-  if (!fbUser) return;
+  if (!fbUser) return Promise.resolve();
   const elapsed = localUserSeconds - lastFlushUserSeconds;
   lastFlushUserSeconds = localUserSeconds;
   const userRef = db.collection("userData").doc(fbUser.uid);
@@ -2620,16 +2617,18 @@ function flushTime() {
     // The old approach (increment → get → update) meant the totalTime write never landed
     // on page close/refresh because the browser killed the tab before the chain finished.
     const fmt = fmtHMS(localUserSeconds);
-    userRef.update({
-      userSeconds: FV.increment(elapsed),
-      totalTime: fmt,
-      ...wordUpdates
-    });
-    summaryRef.set({ userSeconds: localUserSeconds, totalTime: fmt }, { merge: true });
+    return Promise.all([
+      userRef.update({
+        userSeconds: FV.increment(elapsed),
+        totalTime: fmt,
+        ...wordUpdates
+      }),
+      summaryRef.set({ userSeconds: localUserSeconds, totalTime: fmt }, { merge: true })
+    ]);
   } else if (Object.keys(wordUpdates).length) {
-    userRef.update(wordUpdates);
+    return userRef.update(wordUpdates);
   }
-
+  return Promise.resolve();
 }
 
 // Reads every userData doc, sums userSeconds across all users, and writes the
