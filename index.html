@@ -2430,10 +2430,12 @@ function signInWithGoogle() {
           await db.collection("users").doc(fbUser.uid).set({
             ...(fbUser.email ? { email: fbUser.email } : {}),
             sessionCount: firebase.firestore.FieldValue.increment(1),
-            userSeconds: localUserSeconds,
+            // Use increment for the anon-session seconds so two simultaneous sign-ins
+            // add their time rather than one overwriting the other.
+            userSeconds: firebase.firestore.FieldValue.increment(localSeconds),
             totalTime: fmtHMS(localUserSeconds),
-            totalQuestionsAnswered: savedQ + sessionQuestionsAnswered,
-            totalCorrectAnswers: savedC + sessionCorrectAnswers
+            totalQuestionsAnswered: firebase.firestore.FieldValue.increment(sessionQuestionsAnswered),
+            totalCorrectAnswers: firebase.firestore.FieldValue.increment(sessionCorrectAnswers)
           }, { merge: true });
           // Sync globals to the merged values — flushTime() and endSession() write
           // from these, so they must reflect the full merged state, not just anon data.
@@ -2575,28 +2577,38 @@ function flushTime() {
   lastFlushUserSeconds = localUserSeconds;
   const userRef = db.collection("userData").doc(fbUser.uid);
   const summaryRef = db.collection("users").doc(fbUser.uid);
-  if (elapsed > 0) {
-    userRef.set({
-      userSeconds: firebase.firestore.FieldValue.increment(elapsed),
-      wordStats: wordStats,
-      activityDays: activityDays
-    }, { merge: true }).then(() => {
-      userRef.get().then(snap => {
-        if (snap.exists) {
-          const secs = snap.data().userSeconds || 0;
-          const fmt = fmtHMS(secs);
-          userRef.set({ totalTime: fmt }, { merge: true });
-          summaryRef.set({ userSeconds: secs, totalTime: fmt }, { merge: true });
-        }
-      });
-    });
-  } else {
-    userRef.set({ wordStats: wordStats, activityDays: activityDays }, { merge: true });
+  const FV = firebase.firestore.FieldValue;
+
+  // Dot-notation keys update individual word entries instead of replacing the whole map,
+  // so concurrent writes from other devices merge rather than overwrite each other.
+  const wordUpdates = {};
+  for (const [word, stat] of Object.entries(wordStats)) {
+    wordUpdates[`wordStats.${word}`] = stat;
   }
+  // arrayUnion appends only missing days; never replaces the array.
+  if (activityDays.length) {
+    wordUpdates.activityDays = FV.arrayUnion(...activityDays);
+  }
+
+  if (elapsed > 0) {
+    // totalTime is derived from localUserSeconds directly — no round-trip read needed.
+    // The old approach (increment → get → update) meant the totalTime write never landed
+    // on page close/refresh because the browser killed the tab before the chain finished.
+    const fmt = fmtHMS(localUserSeconds);
+    userRef.update({
+      userSeconds: FV.increment(elapsed),
+      totalTime: fmt,
+      ...wordUpdates
+    });
+    summaryRef.set({ userSeconds: localUserSeconds, totalTime: fmt }, { merge: true });
+  } else if (Object.keys(wordUpdates).length) {
+    userRef.update(wordUpdates);
+  }
+
   if (elapsed > 0) {
     const globalRef = db.collection("stats").doc("global");
     globalRef.set({
-      totalSeconds: firebase.firestore.FieldValue.increment(elapsed)
+      totalSeconds: FV.increment(elapsed)
     }, { merge: true }).then(() => {
       globalRef.get().then(snap => {
         if (snap.exists) {
@@ -2623,12 +2635,17 @@ function trackAnswer(isRight, word) {
   sessionQuestionsAnswered++;
   if (isRight) sessionCorrectAnswers++;
 
-  const inc1 = firebase.firestore.FieldValue.increment(1);
-  db.collection("userData").doc(fbUser.uid).set({
+  const FV = firebase.firestore.FieldValue;
+  const inc1 = FV.increment(1);
+  // Dot-notation key writes only this word's entry; arrayUnion appends only if the day is new.
+  // Both avoid replacing sibling data written by other devices at the same time.
+  const wordUpdate = word ? { [`wordStats.${word}`]: wordStats[word] } : {};
+  db.collection("userData").doc(fbUser.uid).update({
     totalQuestionsAnswered: inc1,
-    wordStats: wordStats,
+    activityDays: FV.arrayUnion(today),
+    ...wordUpdate,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  }, { merge: true });
+  });
   db.collection("users").doc(fbUser.uid).set({
     totalQuestionsAnswered: inc1,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
@@ -2649,11 +2666,12 @@ function endSession() {
     correctAnswers: sessionCorrectAnswers,
     duration: duration
   };
-  const updated = [...sessionHistory, record].slice(-50); // keep last 50 sessions
-  sessionHistory = updated;
-  db.collection("userData").doc(fbUser.uid).set({
-    sessionHistory: updated
-  }, { merge: true }).catch(() => {});
+  sessionHistory = [...sessionHistory, record].slice(-50); // keep local copy trimmed
+  // arrayUnion appends the record atomically — two devices writing at the same time
+  // each add their own record instead of one overwriting the other.
+  db.collection("userData").doc(fbUser.uid).update({
+    sessionHistory: firebase.firestore.FieldValue.arrayUnion(record)
+  }).catch(() => {});
   // Reset so duplicate calls don't double-record
   sessionStartTime = Date.now();
   sessionQuestionsAnswered = 0;
