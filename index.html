@@ -2606,16 +2606,11 @@ function flushTime() {
   }
 
   if (elapsed > 0) {
+    // totalTime can't be computed exactly without reading the global counter first,
+    // but that async chain never survives a page close. Drop it from the global doc —
+    // derive it from totalSeconds at read time instead.
     const globalRef = db.collection("stats").doc("global");
-    globalRef.set({
-      totalSeconds: FV.increment(elapsed)
-    }, { merge: true }).then(() => {
-      globalRef.get().then(snap => {
-        if (snap.exists) {
-          globalRef.set({ totalTime: fmtHMS(snap.data().totalSeconds || 0) }, { merge: true });
-        }
-      });
-    });
+    globalRef.set({ totalSeconds: FV.increment(elapsed) }, { merge: true });
   }
 }
 
