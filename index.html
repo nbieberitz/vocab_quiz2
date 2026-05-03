@@ -1988,6 +1988,8 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
 
 function fmtHMS(s) {
   const h = Math.floor(s / 3600);
@@ -2207,6 +2209,7 @@ function updateAuthUI(user) {
 
 // ── Google sign-in (popup) ────────────────────────────────────────────────────
 function signInWithGoogle() {
+  signingOut = false;
   const btn = document.getElementById('google-signin-btn');
   btn.disabled = true;
   btn.textContent = 'Signing in…';
