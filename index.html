@@ -2017,7 +2017,7 @@ auth.onAuthStateChanged(async user => {
     fbUser = user;
     // If this is a just-upgraded Google account, write the email now
     if (user.email) {
-      db.collection("individual user data").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
+      db.collection("userData").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
       db.collection("users").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
     }
     updateAuthUI(user);
@@ -2037,7 +2037,7 @@ auth.onAuthStateChanged(async user => {
 
 async function initUserDoc(user) {
   const uid = user.uid;
-  const userRef = db.collection("individual user data").doc(uid);
+  const userRef = db.collection("userData").doc(uid);
   const summaryRef = db.collection("users").doc(uid);
   const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
@@ -2147,7 +2147,7 @@ async function initUserDoc(user) {
 // ── Preference sync ───────────────────────────────────────────────────────────
 function savePreferences() {
   if (!fbUser) return;
-  db.collection("individual user data").doc(fbUser.uid).set({
+  db.collection("userData").doc(fbUser.uid).set({
     preferences: {
       theme: localStorage.getItem('vocab_theme') || 'dark',
       mode: mode,
@@ -2283,7 +2283,7 @@ function signInWithGoogle() {
       }
       // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
-        db.collection("individual user data").doc(fbUser.uid)
+        db.collection("userData").doc(fbUser.uid)
           .set({ email: fbUser.email }, { merge: true })
           .catch(err => console.error("email write failed:", err.code, err.message));
         db.collection("users").doc(fbUser.uid)
@@ -2322,7 +2322,7 @@ function signInWithGoogle() {
           // authenticated — security rules allow this. After delete() is called
           // the anon Auth session is gone and the delete would be rejected.
           if (anonUid) {
-            await db.collection("individual user data").doc(anonUid).delete().catch(() => {});
+            await db.collection("userData").doc(anonUid).delete().catch(() => {});
             await db.collection("users").doc(anonUid).delete().catch(() => {});
           }
           if (anonUser && anonUser.isAnonymous) {
@@ -2334,7 +2334,7 @@ function signInWithGoogle() {
             : await auth.signInWithPopup(googleProvider);
           suppressAnon = false;
           fbUser = result.user;
-          const userRef = db.collection("individual user data").doc(fbUser.uid);
+          const userRef = db.collection("userData").doc(fbUser.uid);
 
           const snap = await userRef.get();
           const saved = snap.exists ? snap.data() : {};
@@ -2458,7 +2458,7 @@ function parseHMS(str) {
 async function syncFromFirestore() {
   if (!fbUser) return;
   try {
-    const snap = await db.collection("individual user data").doc(fbUser.uid).get();
+    const snap = await db.collection("userData").doc(fbUser.uid).get();
     if (!snap.exists) return;
     const data = snap.data();
     // Merge remote wordStats — take the higher seen/correct count per word
@@ -2518,7 +2518,7 @@ function stopTimers() {
 
 function flushTime() {
   if (!fbUser) return;
-  db.collection("individual user data").doc(fbUser.uid).set({
+  db.collection("userData").doc(fbUser.uid).set({
     totalTime: fmtHMS(localUserSeconds),
     wordStats: wordStats,
     activityDays: activityDays
@@ -2546,7 +2546,7 @@ function trackAnswer(isRight, word) {
   if (isRight) sessionCorrectAnswers++;
 
   const inc1 = firebase.firestore.FieldValue.increment(1);
-  db.collection("individual user data").doc(fbUser.uid).set({
+  db.collection("userData").doc(fbUser.uid).set({
     totalQuestionsAnswered: inc1,
     wordStats: wordStats,
     ...(isRight ? { totalCorrectAnswers: inc1 } : {})
@@ -2573,7 +2573,7 @@ function endSession() {
   };
   const updated = [...sessionHistory, record].slice(-50); // keep last 50 sessions
   sessionHistory = updated;
-  db.collection("individual user data").doc(fbUser.uid).set({
+  db.collection("userData").doc(fbUser.uid).set({
     sessionHistory: updated
   }, { merge: true }).catch(() => {});
   // Reset so duplicate calls don't double-record
