@@ -1375,7 +1375,7 @@ let secondTimer = null;
 let flushTimer = null;
 let syncTimer = null;
 let localUserSeconds = 0;
-let localGlobalSeconds = 0;
+let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
 
 // ── New tracking state ────────────────────────────────────────────────────────
 let activityDays = [];      // ["YYYY-MM-DD", ...] — for streak calculation
@@ -2067,7 +2067,7 @@ async function initUserDoc(user) {
         totalCorrectAnswers: old.totalCorrectAnswers || 0
       });
       localUserSeconds = parseHMS(old.totalTime || "00:00:00");
-      localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+      lastFlushUserSeconds = localUserSeconds;
       wordStats = old.wordStats || {};
       activityDays = old.activityDays || [];
       sessionHistory = old.sessionHistory || [];
@@ -2084,7 +2084,7 @@ async function initUserDoc(user) {
         const userNumber = count + 1;
         t.set(statsRef, {
           totalUsers: userNumber,
-          totalTime: "00:00:00",
+          totalSeconds: 0,
           totalQuestionsAnswered: 0,
           totalCorrectAnswers: 0
         }, { merge: true });
@@ -2112,7 +2112,7 @@ async function initUserDoc(user) {
         });
       });
       localUserSeconds = 0;
-      localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+      lastFlushUserSeconds = 0;
       wordStats = {};
     }
   } else {
@@ -2127,7 +2127,7 @@ async function initUserDoc(user) {
       ...(user.email ? { email: user.email } : {})
     }, { merge: true });
     localUserSeconds = parseHMS(snap.data().totalTime || "00:00:00");
-    localGlobalSeconds = statsSnap.exists ? parseHMS(statsSnap.data().totalTime) : 0;
+    lastFlushUserSeconds = localUserSeconds;
     wordStats = snap.data().wordStats || {};
     activityDays = snap.data().activityDays || [];
     sessionHistory = snap.data().sessionHistory || [];
@@ -2497,7 +2497,6 @@ function startSecondTimer() {
   stopTimers();
   secondTimer = setInterval(() => {
     localUserSeconds++;
-    localGlobalSeconds++;
   }, 1000);
   flushTimer = setInterval(() => {
     flushTime();
@@ -2518,6 +2517,8 @@ function stopTimers() {
 
 function flushTime() {
   if (!fbUser) return;
+  const elapsed = localUserSeconds - lastFlushUserSeconds;
+  lastFlushUserSeconds = localUserSeconds;
   db.collection("userData").doc(fbUser.uid).set({
     totalTime: fmtHMS(localUserSeconds),
     wordStats: wordStats,
@@ -2526,7 +2527,11 @@ function flushTime() {
   db.collection("users").doc(fbUser.uid).set({
     totalTime: fmtHMS(localUserSeconds)
   }, { merge: true });
-  db.collection("stats").doc("global").set({ totalTime: fmtHMS(localGlobalSeconds) }, { merge: true });
+  if (elapsed > 0) {
+    db.collection("stats").doc("global").set({
+      totalSeconds: firebase.firestore.FieldValue.increment(elapsed)
+    }, { merge: true });
+  }
 }
 
 function trackAnswer(isRight, word) {
