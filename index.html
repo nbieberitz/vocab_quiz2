@@ -1125,7 +1125,7 @@ kbd{
       </div>
       <!-- User badge (shown when signed in with Google) -->
       <div class="user-badge" id="user-badge" style="display:none">
-        <img class="user-badge-avatar" id="user-avatar" src="" alt="">
+        <img class="user-badge-avatar" id="user-avatar" src="" alt="" referrerpolicy="no-referrer">
         <span class="user-badge-name" id="user-display-name"></span>
         <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
       </div>
@@ -2193,7 +2193,8 @@ function updateAuthUI(user) {
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     if (syncBtn) syncBtn.style.display = '';
-    document.getElementById('user-display-name').textContent = user.displayName || user.email || 'Signed in';
+    const firstName = (user.displayName || user.email || 'Signed in').split(' ')[0];
+    document.getElementById('user-display-name').textContent = firstName;
     const avatar = document.getElementById('user-avatar');
     if (user.photoURL) {
       avatar.src = user.photoURL;
