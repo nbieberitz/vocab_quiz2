@@ -1376,7 +1376,6 @@ let flushTimer = null;
 let syncTimer = null;
 let localUserSeconds = 0;
 let lastFlushUserSeconds = 0; // tracks user seconds at last flush, used to increment global atomically
-let localGlobalSeconds = 0;  // seeded from the full userData sum; incremented every second for real-time global writes
 let lastActivityTime = Date.now(); // updated on any user input — drives AFK detection
 let isAFK = false;                 // true while the user has been idle for 5+ minutes
 const AFK_MS = 5 * 60 * 1000;     // 5 minutes in milliseconds
@@ -2046,7 +2045,6 @@ async function initUserDoc(user) {
   const statsRef = db.collection("stats").doc("global");
   const snap = await userRef.get();
   const statsSnap = await statsRef.get();
-  localGlobalSeconds = statsSnap.exists ? (statsSnap.data().totalSeconds || 0) : 0;
 
   if (!snap.exists) {
     // Check if this user has legacy data in the old "users" collection (schema migration case)
@@ -2569,10 +2567,11 @@ function startSecondTimer() {
     } else {
       isAFK = false;
       localUserSeconds++;
-      localGlobalSeconds++;
     }
   }, 1000);
-  // Flush user seconds and update stats/global in one atomic write (no read needed).
+  // Flush elapsed seconds (incrementing stats/global/totalSeconds atomically),
+  // then read that value back to write totalTime — guaranteeing totalTime is always
+  // derived from the actual stored totalSeconds, never from a local running counter.
   flushTimer = setInterval(async () => {
     await flushTime();
     syncGlobalStats();
@@ -2597,37 +2596,26 @@ function flushTime() {
   lastFlushUserSeconds = localUserSeconds;
   const userRef = db.collection("userData").doc(fbUser.uid);
   const summaryRef = db.collection("users").doc(fbUser.uid);
-  const statsRef = db.collection("stats").doc("global");
   const FV = firebase.firestore.FieldValue;
 
-  // Dot-notation keys update individual word entries instead of replacing the whole map,
-  // so concurrent writes from other devices merge rather than overwrite each other.
   const wordUpdates = {};
   for (const [word, stat] of Object.entries(wordStats)) {
     wordUpdates[`wordStats.${word}`] = stat;
   }
-  // arrayUnion appends only missing days; never replaces the array.
   if (activityDays.length) {
     wordUpdates.activityDays = FV.arrayUnion(...activityDays);
   }
 
   if (elapsed > 0) {
     const fmt = fmtHMS(localUserSeconds);
-    // localGlobalSeconds is already kept in sync by the per-second timer.
-    // Write totalSeconds (server-side atomic increment) and totalTime together so
-    // no separate read of stats/global is ever needed — avoiding security-rule
-    // issues that block anonymous users from reading that doc.
-    // totalTime is derived purely from localGlobalSeconds, which mirrors totalSeconds.
-    statsRef.set({
-      totalSeconds: FV.increment(elapsed),
-      totalTime: fmtHMS(localGlobalSeconds)
-    }, { merge: true }).catch(() => {});
+    // Atomically increment global totalSeconds. totalTime is NOT written here —
+    // syncGlobalStats reads it back after the write and derives totalTime from it,
+    // so totalTime is always purely based on the server-stored totalSeconds.
+    db.collection("stats").doc("global")
+      .set({ totalSeconds: FV.increment(elapsed) }, { merge: true })
+      .catch(err => console.warn("global totalSeconds write failed:", err));
     return Promise.all([
-      userRef.update({
-        userSeconds: FV.increment(elapsed),
-        totalTime: fmt,
-        ...wordUpdates
-      }),
+      userRef.update({ userSeconds: FV.increment(elapsed), totalTime: fmt, ...wordUpdates }),
       summaryRef.set({ userSeconds: localUserSeconds, totalTime: fmt }, { merge: true })
     ]);
   } else if (Object.keys(wordUpdates).length) {
@@ -2636,13 +2624,16 @@ function flushTime() {
   return Promise.resolve();
 }
 
-// No reads needed — totalSeconds is maintained via atomic increments in flushTime.
-// This just re-derives totalTime from localGlobalSeconds, which the per-second timer
-// keeps in sync, so anonymous users never hit a security-rule read block.
+// Reads stats/global/totalSeconds — kept accurate by atomic increments in flushTime —
+// and writes totalTime purely as fmtHMS(totalSeconds). No userData collection scan.
+// Requires stats/global to be readable in Firestore rules:
+//   match /stats/{doc} { allow read: if true; allow write: if request.auth != null; }
 async function syncGlobalStats() {
   try {
+    const snap = await db.collection("stats").doc("global").get();
+    const total = snap.exists ? (snap.data().totalSeconds || 0) : 0;
     await db.collection("stats").doc("global").set({
-      totalTime: fmtHMS(localGlobalSeconds)
+      totalTime: fmtHMS(total)
     }, { merge: true });
   } catch (err) {
     console.warn("syncGlobalStats error:", err);
