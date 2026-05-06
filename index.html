@@ -192,31 +192,46 @@ body.light .flash-card::before{
 body.light .adaptive-word-badge{color:rgba(0,0,0,0.7);}
 
 .heatmap-header{
-  position:relative;
   display:flex;
-  align-items:flex-start;
-  padding:2rem 32px 1.5rem;
+  flex-direction:column;
+  padding:1.75rem 32px 1.25rem;
+  gap:0;
+  border-bottom:1px solid var(--border);
+}
+.heatmap-header-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:relative;
+  margin-bottom:1rem;
+}
+.heatmap-header-top-left{
+  display:flex;flex-direction:column;gap:3px;
+}
+.heatmap-header-top-right{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.heatmap-header-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
   gap:1rem;
+  flex-wrap:wrap;
 }
-.heatmap-title-center{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  top:2rem;
-}
-.heatmap-header-left{
-  display:flex;flex-direction:column;gap:0.6rem;
-}
-.heatmap-header-meta{
-  display:flex;align-items:center;gap:2rem;flex-wrap:wrap;
-}
+.heatmap-title-center{ display:none; }
+.heatmap-header-left{ display:flex;flex-direction:column;gap:0.6rem; }
+.heatmap-header-meta{ display:flex;align-items:center;gap:2rem;flex-wrap:wrap; }
 .heatmap-legend{
-  display:flex;align-items:center;gap:12px;
+  display:flex;align-items:center;gap:14px;
   font-family:'DM Mono',monospace;font-size:10px;
   letter-spacing:0.07em;text-transform:uppercase;color:var(--text);opacity:0.7;
 }
 .heatmap-legend-item{display:flex;align-items:center;gap:5px;}
-.heatmap-legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.heatmap-legend-swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+.heatmap-header-hint{
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.06em;
+  color:var(--text);opacity:0.5;white-space:nowrap;
+}
 .heatmap-lesson-labels{
   display:grid;
   grid-template-columns:repeat(10,1fr);
@@ -414,6 +429,40 @@ body::after{
   color:#050810;
   font-weight:500;
   box-shadow:0 0 16px rgba(0,212,255,0.45);
+}
+
+.settings-panel{
+  margin-bottom:1.5rem;
+}
+.settings-toggle{
+  display:flex;align-items:center;gap:7px;
+  background:transparent;border:none;
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);cursor:pointer;
+  padding:0 0 10px 0;
+  transition:color .15s;
+  width:100%;
+}
+.settings-toggle:hover{color:var(--text);}
+.settings-toggle-arrow{
+  margin-left:auto;
+  font-size:9px;
+  transition:transform .2s ease;
+  opacity:0.6;
+}
+.settings-panel.collapsed .settings-toggle-arrow{
+  transform:rotate(180deg);
+}
+.settings-body{
+  overflow:hidden;
+  transition:max-height .3s cubic-bezier(0.4,0,0.2,1), opacity .25s ease;
+  max-height:400px;
+  opacity:1;
+}
+.settings-panel.collapsed .settings-body{
+  max-height:0;
+  opacity:0;
 }
 
 /* Direction toggle */
@@ -638,6 +687,25 @@ body::after{
   box-shadow:0 0 20px rgba(0,212,255,0.15);
 }
 
+/* Show answer button */
+.show-ans-btn{
+  width:100%;margin-top:8px;padding:10px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:transparent;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+}
+.show-ans-btn:hover{
+  border-color:var(--wrong);
+  color:var(--wrong);
+  background:var(--wrong-bg);
+}
+
 /* Results */
 .result{text-align:center;padding:2.5rem 1.5rem;animation:fadeUp .35s ease both}
 .big-score{
@@ -696,6 +764,10 @@ body::after{
 .review-def{font-size:13px;color:var(--muted);line-height:1.6}
 
 /* Flash cards */
+.flash-scene{
+  perspective:1000px;
+  perspective-origin:50% 45%;
+}
 .flash-card{
   background:linear-gradient(145deg,var(--surface),var(--surface2));
   border:1px solid var(--border);
@@ -704,27 +776,37 @@ body::after{
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   cursor:pointer;
-  transition:all .2s;
-  animation:fadeUp .3s ease both;
+  transition:transform 0.22s cubic-bezier(0.4,0,0.6,1), box-shadow 0.2s, border-color 0.2s;
   text-align:center;
-  position:relative;overflow:hidden;
+  position:relative;
   margin-bottom:1rem;
   box-shadow:0 4px 40px rgba(0,0,0,0.12);
+  will-change:transform;
+  backface-visibility:hidden;
 }
 .flash-card::before{
   content:'';
   position:absolute;top:0;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,rgba(0,212,255,0.2),transparent);
+  border-radius:22px 22px 0 0;
 }
 .flash-card::after{
   content:'TAP TO FLIP';
   position:absolute;bottom:14px;right:18px;
   font-family:'DM Mono',monospace;font-size:10px;
-  letter-spacing:0.12em;color:var(--muted);opacity:0.4;
+  letter-spacing:0.12em;color:var(--text);opacity:0.35;
 }
 .flash-card:hover{
   border-color:var(--border2);
   box-shadow:0 8px 40px rgba(0,0,0,0.15),0 0 20px rgba(0,212,255,0.06);
+}
+.flash-card.flip-exit{
+  transform:rotateX(90deg) scale(0.96);
+  transition:transform 0.18s cubic-bezier(0.4,0,1,1);
+}
+.flash-card.flip-enter-start{
+  transform:rotateX(-90deg) scale(0.96);
+  transition:none !important;
 }
 .flash-card.flipped{
   background:linear-gradient(145deg,var(--surface2),var(--surface));
@@ -759,42 +841,130 @@ body::after{
   font-size:16px;font-weight:300;
   color:var(--text);line-height:1.7;max-width:480px;
 }
+.flash-split{
+  display:grid;
+  grid-template-columns:1fr 1px 1fr;
+  gap:0 2rem;
+  width:100%;
+  text-align:left;
+  align-items:start;
+}
+.flash-split-divider{
+  background:var(--border2);
+  align-self:stretch;
+  min-height:60px;
+}
+.flash-split-col{display:flex;flex-direction:column;gap:0.6rem;}
+.flash-split-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--muted);
+}
+@media(max-width:560px){
+  .flash-split{grid-template-columns:1fr;gap:1.25rem 0;}
+  .flash-split-divider{display:none;}
+}
+
 .flash-lesson{
   font-family:'DM Mono',monospace;font-size:11px;
   letter-spacing:0.08em;color:var(--accent2);
   margin-top:1rem;opacity:0.8;
 }
+.flash-lesson-badge{
+  position:absolute;top:14px;left:18px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--text);opacity:0.35;
+}
+
+
+/* Flash self-assessment buttons */
+.flash-assess{
+  display:flex;gap:8px;justify-content:center;align-items:center;
+  animation:fadeUp .2s ease both;
+}
+.assess-btn{
+  flex:1;max-width:180px;padding:11px 16px;
+  border-radius:12px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.09em;
+  text-transform:uppercase;cursor:pointer;
+  transition:all .15s;border:1px solid;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.assess-nope{
+  background:var(--wrong-bg);
+  border-color:var(--wrong-border);
+  color:var(--wrong);
+}
+.assess-nope:hover{
+  background:rgba(255,92,122,0.15);
+  border-color:var(--wrong);
+  box-shadow:0 0 16px rgba(255,92,122,0.2);
+}
+.assess-got{
+  background:var(--correct-bg);
+  border-color:var(--correct-border);
+  color:var(--correct);
+}
+.assess-got:hover{
+  background:rgba(0,229,160,0.15);
+  border-color:var(--correct);
+  box-shadow:0 0 16px rgba(0,229,160,0.2);
+}
+.assess-divider{
+  width:1px;height:28px;
+  background:var(--border2);
+  flex-shrink:0;opacity:0.5;
+}
+.flash-assess-skip{
+  padding:11px 14px;
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.09em;text-transform:uppercase;
+  color:var(--muted);cursor:pointer;
+  transition:color .15s;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.flash-assess-skip:hover{color:var(--text);border-color:var(--border2);}
+.flash-card.revealed{
+  align-items:flex-start;
+  justify-content:center;
+}
 
 /* Flash nav */
-.flash-nav{display:flex;gap:10px;justify-content:center}
+.flash-nav{display:flex;gap:8px;justify-content:center;align-items:center;}
 .fnav-btn{
-  flex:1;max-width:140px;padding:11px;
+  display:flex;align-items:center;justify-content:center;
+  width:42px;height:42px;
   border:1px solid var(--border);
-  border-radius:13px;
+  border-radius:12px;
   background:var(--surface);
-  color:var(--text);
-  font-family:'DM Mono',monospace;
-  font-size:12px;letter-spacing:0.06em;
-  text-transform:uppercase;cursor:pointer;transition:all .15s;
+  color:var(--muted);
+  font-size:15px;
+  cursor:pointer;transition:all .15s;
+  flex-shrink:0;
 }
 .fnav-btn:hover{
   border-color:var(--border2);
-  background:var(--surface2);
   color:var(--accent);
+  background:var(--surface2);
 }
-
 .fnav-toggle{
-  flex:1;max-width:140px;padding:11px;
+  flex:1;max-width:160px;padding:10px 14px;
   border:1px solid var(--border);
-  border-radius:13px;
+  border-radius:12px;
   background:var(--surface);
   color:var(--muted);
   font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.06em;
+  font-size:10px;letter-spacing:0.08em;
   text-transform:uppercase;cursor:pointer;transition:all .15s;
-  display:flex;flex-direction:column;align-items:center;gap:3px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
 }
-.fnav-toggle .toggle-label{font-size:9px;letter-spacing:0.1em;opacity:0.6}
+.fnav-toggle .toggle-label{display:none;}
 .fnav-toggle.on{
   border-color:var(--accent2);
   background:rgba(245,166,35,0.08);
@@ -802,6 +972,14 @@ body::after{
   box-shadow:0 0 10px rgba(245,166,35,0.12);
 }
 .fnav-toggle:hover{border-color:var(--border2);}
+.flash-footer{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  margin-top:10px;
+}
+.flash-footer-hint{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.07em;color:var(--muted);opacity:0.55;
+}
 
 
 .example-btn{
@@ -840,12 +1018,6 @@ body::after{
 }
 .example-panel .ex-sentence em{
   font-style:italic;color:var(--accent2);
-}
-.example-panel .ex-tip{
-  font-family:'DM Mono',monospace;font-size:11px;
-  letter-spacing:0.04em;color:var(--muted);
-  border-top:1px solid rgba(245,166,35,0.12);
-  padding-top:7px;margin-top:2px;
 }
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
@@ -1016,10 +1188,23 @@ body::after{
   background:var(--surface);
   border:1px solid var(--border2);
   border-radius:14px;
-  padding:20px 22px;
-  transition:border-color .15s;
+  padding:20px 56px 20px 22px;
+  transition:border-color .15s, background .12s, box-shadow .15s;
+  position:relative;
+  cursor:pointer;
 }
-.glossary-entry:hover{border-color:var(--accent);box-shadow:0 0 14px var(--glow);}
+.glossary-entry:hover{
+  border-color:var(--accent);
+  background:rgba(0,212,255,0.025);
+  box-shadow:0 0 14px var(--glow);
+}
+.glossary-entry.gl-selected{
+  border-color:rgba(0,212,255,0.45);
+  background:rgba(0,212,255,0.05);
+  box-shadow:0 0 14px var(--glow);
+}
+.glossary-entry.gl-hidden{opacity:0.38;}
+.glossary-entry.gl-hidden .glossary-word{text-decoration:line-through;opacity:0.6;}
 .glossary-word{
   font-family:'Bebas Neue',sans-serif;
   font-size:1.9rem;
@@ -1027,6 +1212,19 @@ body::after{
   color:var(--text);
   margin-bottom:6px;
 }
+.glossary-word-row{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:6px;flex-wrap:wrap;
+}
+.glossary-acc-badge{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  padding:2px 9px;border-radius:20px;
+  color:rgba(255,255,255,0.9);
+  flex-shrink:0;
+}
+body.light .glossary-acc-badge{color:rgba(0,0,0,0.75);}
 .glossary-def{
   font-size:15px;
   color:var(--text);
@@ -1035,7 +1233,145 @@ body::after{
   font-family:'DM Sans',sans-serif;
   font-weight:300;
 }
+.glossary-example{
+  margin-top:11px;
+  padding-top:11px;
+  border-top:1px solid var(--border);
+  font-size:13.5px;
+  font-weight:300;
+  line-height:1.75;
+  color:var(--text);
+  opacity:0.65;
+  font-family:'DM Sans',sans-serif;
+}
+.glossary-example em{
+  font-style:italic;
+  color:var(--accent2);
+  opacity:1;
+}
+.glossary-confused{
+  margin-top:8px;
+  font-family:'DM Mono',monospace;
+  font-size:10.5px;letter-spacing:0.05em;
+  color:var(--wrong);
+  opacity:0.75;
+}
+.glossary-confused-curated{
+  margin-top:6px;
+  font-family:'DM Mono',monospace;
+  font-size:10.5px;letter-spacing:0.05em;
+  color:var(--accent2);
+  opacity:0.82;
+  line-height:1.6;
+}
+.glossary-confused-curated strong{color:var(--accent2);font-weight:600;}
+.confusion-tip{
+  font-family:'DM Sans',sans-serif;
+  font-size:12px;line-height:1.55;
+  color:var(--text);opacity:0.85;
+  margin-top:7px;
+  padding:6px 10px;
+  border-left:2px solid var(--accent2);
+  background:rgba(245,166,35,0.06);
+  border-radius:0 6px 6px 0;
+}
+.confusion-tip strong{color:var(--accent2);}
+.confusion-tip a{color:var(--accent2);text-decoration:none;}
+.confusion-tip a:hover{text-decoration:underline;}
 
+/* ── Word selection & hidden words ───────────────────────────────────────── */
+.heatmap-cell.hm-selected{
+  outline:2px solid var(--accent);
+  outline-offset:-2px;
+  z-index:3;
+}
+.heatmap-cell.hm-hidden{
+  opacity:0.22;
+  filter:grayscale(0.6);
+}
+.heatmap-cell.hm-hidden .hm-hidden-icon{
+  position:absolute;top:3px;right:4px;
+  font-size:9px;opacity:0.7;pointer-events:none;
+}
+.glossary-entry.gl-hidden{opacity:0.38;}
+.glossary-entry.gl-hidden .glossary-word{text-decoration:line-through;opacity:0.6;}
+.gl-check{
+  position:absolute;top:20px;right:18px;
+  width:20px;height:20px;
+  border:1.5px solid var(--border2);
+  border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--accent);
+  transition:all .12s;
+  background:var(--surface);
+  flex-shrink:0;
+}
+.gl-selected .gl-check{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#05080f;
+}
+.hidden-badge{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2px 8px;
+  cursor:pointer;
+  transition:all .12s;
+}
+.hidden-badge:hover{border-color:var(--correct);color:var(--correct);}
+
+/* Action bar */
+.word-action-bar{
+  position:sticky;bottom:0;
+  background:var(--surface);
+  border-top:1px solid var(--border2);
+  padding:12px 32px;
+  display:none;
+  align-items:center;
+  gap:10px;
+  z-index:20;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.25);
+  flex-wrap:wrap;
+}
+.word-action-bar.visible{display:flex;}
+.sel-count{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text);opacity:0.7;
+  margin-right:4px;
+  white-space:nowrap;
+}
+.act-btn{
+  padding:7px 16px;
+  border-radius:30px;
+  border:1px solid var(--border2);
+  background:transparent;
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.06em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+  color:var(--text);
+  white-space:nowrap;
+}
+.act-btn:hover{border-color:var(--accent);color:var(--accent);}
+.act-btn.drill{
+  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
+  border-color:transparent;color:#050810;
+  box-shadow:0 0 14px rgba(0,212,255,0.3);
+}
+.act-btn.drill:hover{filter:brightness(1.08);box-shadow:0 0 20px rgba(0,212,255,0.45);}
+.act-btn.hide-btn{border-color:rgba(255,92,122,0.4);color:var(--wrong);}
+.act-btn.hide-btn:hover{background:var(--wrong-bg);}
+.act-btn.restore-btn{border-color:rgba(0,229,160,0.4);color:var(--correct);}
+.act-btn.restore-btn:hover{background:var(--correct-bg);}
+.act-btn.clear-btn{opacity:0.55;}
+.act-btn.clear-btn:hover{opacity:1;color:var(--text);}
 
 .kbd-hint{
   display:flex;gap:1.5rem;justify-content:center;
@@ -1138,31 +1474,47 @@ kbd{
   <!-- Heatmap overlay -->
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
     <div class="heatmap-header">
-      <!-- Left: Close + Sync -->
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
-        <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sync
-        </button>
+      <!-- Row 1: Title left, action buttons right -->
+      <div class="heatmap-header-top">
+        <!-- Top-left: buttons -->
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
+          <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sync
+          </button>
+        </div>
+        <!-- Center: title absolutely positioned -->
+        <div style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;">
+          <div class="glossary-title">Word Heat Map</div>
+          <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
+        </div>
+        <!-- Right: invisible spacer to balance flex layout -->
+        <div style="flex-shrink:0;visibility:hidden;display:flex;gap:8px;">
+          <button class="glossary-close">Sync</button>
+          <button class="glossary-close">✕ Close</button>
+        </div>
       </div>
-      <!-- Center: Title absolutely positioned -->
-      <div class="heatmap-title-center">
-        <div class="glossary-title">Word Heat Map</div>
-      </div>
-      <!-- Right: Meta (subtitle + legend) pushed to right -->
-      <div class="heatmap-header-meta" style="margin-left:auto;text-align:right">
-        <div class="glossary-sub" id="heatmap-sub">Answer questions to build your map</div>
-        <div class="heatmap-legend" style="justify-content:flex-end">
+      <!-- Row 2: Legend left, hint right -->
+      <div class="heatmap-header-bottom">
+        <div class="heatmap-legend">
           <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-unseen)"></div>Unseen</div>
           <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-low)"></div>&lt;50%</div>
           <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-mid)"></div>50–74%</div>
           <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-good)"></div>75–89%</div>
           <div class="heatmap-legend-item"><div class="heatmap-legend-swatch" style="background:var(--hm-great)"></div>90%+</div>
         </div>
+        <div class="heatmap-header-hint">Click cells to select · Drill or hide selected words</div>
       </div>
     </div>
     <div class="heatmap-grid" id="heatmap-grid"></div>
+    <div class="word-action-bar" id="hm-action-bar">
+      <span class="sel-count" id="hm-sel-count">0 words selected</span>
+      <button class="act-btn drill" onclick="drillSelected()">▶ Drill Selected</button>
+      <button class="act-btn hide-btn" onclick="hideSelected()">🚫 Hide from Quiz</button>
+      <button class="act-btn restore-btn" onclick="restoreSelected()">✓ Restore to Quiz</button>
+      <button class="act-btn clear-btn" onclick="clearSelection()">✕ Clear</button>
+    </div>
   </div>
 
   <!-- Glossary overlay -->
@@ -1177,24 +1529,40 @@ kbd{
         </div>
         <div class="glossary-count" id="glossary-count"></div>
         <div id="glossary-body"></div>
+        <div class="word-action-bar" id="gl-action-bar">
+          <span class="sel-count" id="gl-sel-count">0 words selected</span>
+          <button class="act-btn drill" onclick="drillSelected()">▶ Drill Selected</button>
+          <button class="act-btn hide-btn" onclick="hideSelected()">🚫 Hide from Quiz</button>
+          <button class="act-btn restore-btn" onclick="restoreSelected()">✓ Restore to Quiz</button>
+          <button class="act-btn clear-btn" onclick="clearSelection()">✕ Clear</button>
+        </div>
       </div>
     </div>
 
   </div>
-  <div class="lesson-row" id="lesson-row"></div>
-  <div class="dir-row" id="order-row">
-    <span class="dir-label">Order</span>
-    <div class="dir-toggle">
-      <button class="dir-btn" id="order-ordered" onclick="setOrder('ordered')">In Order</button>
-      <button class="dir-btn active" id="order-random" onclick="setOrder('random')">Randomized</button>
-    </div>
-  </div>
-  <div class="dir-row" id="dir-row">
-    <span class="dir-label">Mode</span>
-    <div class="dir-toggle">
-      <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Define the Word</button>
-      <button class="dir-btn" id="dir-def" onclick="setDir('def')">Match the Definition</button>
-      <button class="dir-btn" id="dir-random" onclick="setDir('random')">Mix of Both</button>
+  <div class="settings-panel" id="settings-panel">
+    <button class="settings-toggle" id="settings-toggle" onclick="toggleSettings()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+      <span class="settings-toggle-arrow" id="settings-arrow">▲</span>
+    </button>
+    <div class="settings-body" id="settings-body">
+      <div class="lesson-row" id="lesson-row"></div>
+      <div class="dir-row" id="order-row">
+        <span class="dir-label">Order</span>
+        <div class="dir-toggle">
+          <button class="dir-btn" id="order-ordered" onclick="setOrder('ordered')">In Order</button>
+          <button class="dir-btn active" id="order-random" onclick="setOrder('random')">Randomized</button>
+        </div>
+      </div>
+      <div class="dir-row" id="dir-row">
+        <span class="dir-label">Mode</span>
+        <div class="dir-toggle">
+          <button class="dir-btn active" id="dir-word" onclick="setDir('word')">Define the Word</button>
+          <button class="dir-btn" id="dir-def" onclick="setDir('def')">Match the Definition</button>
+          <button class="dir-btn" id="dir-random" onclick="setDir('random')">Mix of Both</button>
+        </div>
+      </div>
     </div>
   </div>
   <div id="app"></div>
@@ -1208,6 +1576,30 @@ kbd{
 </div>
 <script>
 const LESSON_NAMES={1:'Language',2:'Possibility',3:'Change',4:'Mind & Knowledge',5:'Avoidance',6:'Sequence',7:'Criticism',8:'Responsibility',9:'Behavior',10:'Skill',11:'Commands',12:'Size',13:'Imitation',14:'Pairs',15:'Reversal'};
+
+// ─── Curated confusion groups ─────────────────────────────────────────────────
+// Word groups known to be commonly confused. Drives glossary hints,
+// wrong-answer tips, and smart distractor selection.
+const CONFUSED_GROUPS=[
+  ["parlance","patois"],
+  ["implausible","inconceivable"],
+  ["proclivity","prone"],
+  ["immutable","inveterate"],
+  ["circumvent","elude","eschew","evasion","shun"],
+  ["spurn","rebuke"],
+  ["accountable","assiduous"],
+  ["compliance","acquiesce"],
+  ["deft","cunning"],
+  ["consummate","proficient","prowess"],
+  ["infinitesimal","modicum"],
+  ["emulate","mimicry"],
+  ["abdicate","renounce"],
+];
+const CONFUSED_MAP={};
+CONFUSED_GROUPS.forEach(group=>{
+  group.forEach(word=>{CONFUSED_MAP[word]=group.filter(w=>w!==word);});
+});
+// ─────────────────────────────────────────────────────────────────────────────
 const ALL=[
   {w:"annotation",d:"A critical or explanatory note",l:1,e:"In the margins of her borrowed book, she had left an annotation on nearly every page, questioning the author's logic in her own scribbled hand."},
   {w:"appellation",d:"A name, title, or designation",l:1,e:"The tiny coastal village had earned the appellation \"The Pearl of the Atlantic\" long before any tourist had ever heard of it."},
@@ -1368,6 +1760,93 @@ let adaptiveCount=0, adaptiveScore=0, adaptiveStreak=0, adaptiveBestStreak=0;
 let adaptiveRecentWords=[], adaptiveNextReview=Math.floor(Math.random()*3)+4;
 let wordStats = {}; // { word: { seen: N, correct: N, lastSeen: timestamp } } — declared before selectLesson('adaptive') runs
 
+// ─── Word selection & hidden words ───────────────────────────────────────────
+let selectedWords = new Set();
+let hiddenWords   = new Set(JSON.parse(localStorage.getItem('vocab_hidden')||'[]'));
+
+function saveHidden(){
+  localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
+  if(fbUser){
+    db.collection("userData").doc(fbUser.uid)
+      .update({hiddenWords:[...hiddenWords]}).catch(()=>{});
+  }
+}
+
+function toggleWordSelect(word){
+  if(selectedWords.has(word)) selectedWords.delete(word);
+  else selectedWords.add(word);
+  updateSelectionUI();
+}
+
+function updateSelectionUI(){
+  const count = selectedWords.size;
+  const label = `${count} word${count!==1?'s':''} selected`;
+  // Heatmap cells
+  document.querySelectorAll('.heatmap-cell[data-word]').forEach(cell=>{
+    cell.classList.toggle('hm-selected', selectedWords.has(cell.dataset.word));
+  });
+  // Glossary entries
+  document.querySelectorAll('.glossary-entry[data-word]').forEach(entry=>{
+    const sel = selectedWords.has(entry.dataset.word);
+    entry.classList.toggle('gl-selected', sel);
+    const chk = entry.querySelector('.gl-check');
+    if(chk) chk.textContent = sel ? '✓' : '';
+  });
+  // Action bars
+  ['hm-action-bar','gl-action-bar'].forEach(id=>{
+    const bar = document.getElementById(id);
+    if(!bar) return;
+    bar.classList.toggle('visible', count>0);
+    const cnt = bar.querySelector('.sel-count');
+    if(cnt) cnt.textContent = label;
+  });
+}
+
+function clearSelection(){
+  selectedWords.clear();
+  updateSelectionUI();
+}
+
+function drillSelected(){
+  if(!selectedWords.size) return;
+  const words = [...selectedWords].map(w=>ALL.find(x=>x.w===w)).filter(Boolean);
+  selectedWords.clear();
+  closeGlossary();
+  closeHeatmap();
+  // Start a focused drill session with just these words
+  mode='quiz';
+  document.getElementById('mode-quiz').className='mode-btn active';
+  document.getElementById('mode-flash').className='mode-btn';
+  document.getElementById('dir-row').style.display='flex';
+  document.getElementById('order-row').style.display='flex';
+  document.getElementById('lesson-row').style.display='flex';
+  queue=shuffle([...words]);
+  current=0;score=0;answered=false;wrong=[];
+  render();
+}
+
+function hideSelected(){
+  if(!selectedWords.size) return;
+  selectedWords.forEach(w=>hiddenWords.add(w));
+  selectedWords.clear();
+  saveHidden();
+  // Refresh whichever overlay is open
+  if(document.getElementById('heatmap-overlay').style.display==='block') openHeatmap();
+  if(document.getElementById('glossary-overlay').classList.contains('open')) openGlossary();
+  updateSelectionUI();
+}
+
+function restoreSelected(){
+  if(!selectedWords.size) return;
+  selectedWords.forEach(w=>hiddenWords.delete(w));
+  selectedWords.clear();
+  saveHidden();
+  if(document.getElementById('heatmap-overlay').style.display==='block') openHeatmap();
+  if(document.getElementById('glossary-overlay').classList.contains('open')) openGlossary();
+  updateSelectionUI();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Firebase / auth state (declared here so savePreferences() can reference
 //    fbUser safely when called from selectLesson/setTheme at startup) ──────────
 let fbUser = null;
@@ -1386,6 +1865,18 @@ let sessionHistory = [];    // [{date, questionsAnswered, correctAnswers, durati
 let sessionStartTime = null;
 let sessionQuestionsAnswered = 0;
 let sessionCorrectAnswers = 0;
+
+// ── Write-batching buffers ────────────────────────────────────────────────────
+// trackAnswer() accumulates into these; flushTime() drains them in a single write.
+let pendingAnswers = 0;
+let pendingCorrect = 0;
+let flushCount = 0; // increments each flush; syncGlobalStats runs every 5th flush (5 min)
+
+function toggleSettings(){
+  const panel = document.getElementById('settings-panel');
+  const collapsed = panel.classList.toggle('collapsed');
+  localStorage.setItem('vocab_settings_collapsed', collapsed ? '1' : '0');
+}
 
 function setDir(d){
   dir=d;
@@ -1451,8 +1942,31 @@ function selectLesson(id){
   startSession();
 }
 
-function getPool(){return selectedLesson==='all'?[...ALL]:ALL.filter(x=>x.l===selectedLesson);}
+function getPool(){
+  const base=selectedLesson==='all'?[...ALL]:ALL.filter(x=>x.l===selectedLesson);
+  return base.filter(x=>!hiddenWords.has(x.w));
+}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// Returns `count` plausible distractors for a given item.
+// Priority: (1) curated confusion-pair words — students need to learn to tell these apart.
+// (2) same-lesson words for thematic relevance. (3) random fill.
+// Confusion history and definition overlap are intentionally excluded here —
+// those signals drive *which word gets asked*, not *how hard the wrong answers are*.
+function smartDistractors(item, count) {
+  // Pull in any words this item is known to be confused with — high priority
+  const confusedPairs=(CONFUSED_MAP[item.w]||[])
+    .map(cw=>ALL.find(x=>x.w===cw))
+    .filter(Boolean);
+  const confusedSet=new Set(confusedPairs.map(x=>x.w));
+
+  const sameLesson=shuffle(ALL.filter(x=>x.w!==item.w && x.l===item.l && !confusedSet.has(x.w)));
+  const otherWords=shuffle(ALL.filter(x=>x.w!==item.w && x.l!==item.l && !confusedSet.has(x.w)));
+
+  // Confused pairs first, then same-lesson, then random fill
+  const pool=[...shuffle(confusedPairs),...sameLesson,...otherWords.slice(0,count*3)];
+  return pool.slice(0,count);
+}
 
 function nextAdaptiveWord(){
   // Every adaptiveNextReview questions, insert a high-accuracy review word
@@ -1478,6 +1992,12 @@ function nextAdaptiveWord(){
     else if(p < 0.75) w = 2.5;        // needs work
     else if(p < 0.9)  w = 1;          // decent
     else w = 0.4;                      // mastered — still appears occasionally
+    // Confusion boost: if this word has been repeatedly confused with other words,
+    // it clearly needs more drilling — push its weight up proportionally.
+    if(s.confusedWith){
+      const totalConfusions = Object.values(s.confusedWith).reduce((a,b)=>a+b, 0);
+      if(totalConfusions > 0) w *= (1 + Math.min(totalConfusions * 0.25, 2)); // cap at 3× boost
+    }
     // Recency boost: words not seen in a while get higher priority
     if (s.lastSeen) {
       const daysSince = (Date.now() - s.lastSeen) / 86400000;
@@ -1542,7 +2062,7 @@ function render(){
   const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
   // attach direction to item for pick() to use
   item._showDef=showDef;
-  const opts=shuffle(getPool().filter(x=>x.w!==item.w)).slice(0,3);
+  const opts=smartDistractors(item, 3);
   opts.push(item);
   const shuffled=shuffle(opts);
   const pct=Math.round((current/queue.length)*100);
@@ -1571,6 +2091,7 @@ function render(){
       </div>
       <div class="quiz-right">
         <div class="options" id="opts">${optsHtml}</div>
+        <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
         <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
       </div>
     </div>
@@ -1578,6 +2099,53 @@ function render(){
       <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span>
       <span><kbd>Space</kbd> to advance</span>
     </div>`;
+}
+
+function showAnswer(){
+  if(answered) return;
+  answered=true;
+  const item=queue[current];
+
+  // Count as wrong — adds to review list and stats
+  wrong.push(item);
+  trackAnswer(false, item.w);
+  if(mode==='adaptive'){adaptiveStreak=0;}
+
+  // Highlight the correct option and attach the example button, same as a normal wrong answer
+  const optEls=document.getElementById('opts').children;
+  const correctLabel=item._showDef ? item.w : item.d;
+  for(let i=0;i<optEls.length;i++){
+    optEls[i].classList.add('disabled');
+    const letter=optEls[i].querySelector('.opt-letter');
+    const labelNode=letter.nextSibling;
+    const label=labelNode?labelNode.textContent.trim():optEls[i].textContent.trim().slice(1);
+    if(label===correctLabel){
+      optEls[i].classList.add('correct');
+      const wrap=document.createElement('div');
+      wrap.style.display='flex';wrap.style.flexDirection='column';wrap.style.alignItems='flex-start';
+      const existingContent=Array.from(optEls[i].childNodes);
+      const inner=document.createElement('div');
+      existingContent.forEach(n=>inner.appendChild(n));
+      wrap.appendChild(inner);
+      const exBtn=document.createElement('button');
+      exBtn.className='example-btn';
+      exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
+      exBtn.onclick=e=>{e.stopPropagation();showExample(item,exBtn,wrap);};
+      wrap.appendChild(exBtn);
+      optEls[i].appendChild(wrap);
+    }
+  }
+
+  // Re-queue the word 2–5 questions ahead so it comes back this session (quiz mode).
+  // Adaptive handles it automatically via the lowered correct/seen ratio → higher weight.
+  if(mode==='quiz'){
+    const insertAt=Math.min(current + 2 + Math.floor(Math.random()*4), queue.length);
+    queue.splice(insertAt, 0, item);
+  }
+
+  const sab=document.getElementById('show-ans-btn');
+  if(sab) sab.style.display='none';
+  document.getElementById('nxt').style.display='block';
 }
 
 function pick(idx,chosen,correct){
@@ -1590,8 +2158,23 @@ function pick(idx,chosen,correct){
   } else {
     wrong.push(queue[current]);
     if(mode==='adaptive') adaptiveStreak=0;
+    // Record which word the student confused the correct answer with.
+    // chosen is either a word name (showDef=true) or a definition string (showDef=false).
+    const correctWord = queue[current].w;
+    const showDefNow = queue[current]._showDef;
+    const confusedWithWord = showDefNow
+      ? chosen  // options were words — chosen IS the wrong word
+      : (ALL.find(x => x.d === chosen)?.w || null);  // options were defs — look up which word owns that def
+    if(confusedWithWord && confusedWithWord !== correctWord){
+      if(!wordStats[correctWord]) wordStats[correctWord] = { seen:0, correct:0 };
+      if(!wordStats[correctWord].confusedWith) wordStats[correctWord].confusedWith = {};
+      wordStats[correctWord].confusedWith[confusedWithWord] =
+        (wordStats[correctWord].confusedWith[confusedWithWord] || 0) + 1;
+    }
   }
   trackAnswer(isRight, queue[current].w);
+  const sab=document.getElementById('show-ans-btn');
+  if(sab) sab.style.display='none';
   const item=queue[current];
   const optEls=document.getElementById('opts').children;
   for(let i=0;i<optEls.length;i++){
@@ -1613,6 +2196,18 @@ function pick(idx,chosen,correct){
       exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
       exBtn.onclick=e=>{e.stopPropagation();showExample(item,exBtn,wrap);};
       wrap.appendChild(exBtn);
+      // If wrong answer, check if the chosen word is a known confused pair of the correct word
+      if(!isRight){
+        const showDefNow=item._showDef;
+        const wrongWord=showDefNow?chosen:(ALL.find(x=>x.d===chosen)?.w||null);
+        const siblings=CONFUSED_MAP[item.w];
+        if(wrongWord && siblings && siblings.includes(wrongWord)){
+          const tip=document.createElement('div');
+          tip.className='confusion-tip';
+          tip.innerHTML=`⚠️ <strong>${item.w}</strong> and <strong>${wrongWord}</strong> are commonly confused — review both in <a href="#" onclick="event.stopPropagation();openGlossary();return false;">All Words</a>.`;
+          wrap.appendChild(tip);
+        }
+      }
       optEls[i].appendChild(wrap);
     }
     else if(i===idx&&!isRight){
@@ -1669,9 +2264,7 @@ function showExample(item,btn,wrap){
     new RegExp(`\\b(${item.w}\\w*)`, 'gi'),
     `<em>$1</em>`
   );
-  const firstWords=item.d.split(' ').slice(0,5).join(' ');
-  const tip=`Memory hook: link "${item.w}" to the idea of "${firstWords}…"`;
-  panel.innerHTML=`<div class="ex-sentence">${highlighted}</div><div class="ex-tip">💡 ${tip}</div>`;
+  panel.innerHTML=`<div class="ex-sentence">${highlighted}</div>`;
   wrap.appendChild(panel);
 }
 
@@ -1685,7 +2278,8 @@ function renderAdaptive(app){
   queue[current] = item; // store so pick() can reference it
   const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
   item._showDef = showDef;
-  const opts = shuffle(ALL.filter(x=>x.w!==item.w)).slice(0,3);
+  // Build distractors using the shared smart scoring function.
+  const opts = smartDistractors(item, 3);
   opts.push(item);
   const shuffled = shuffle(opts);
   const lname = `Lesson ${item.l} · ${LESSON_NAMES[item.l]}`;
@@ -1719,6 +2313,7 @@ function renderAdaptive(app){
       </div>
       <div class="quiz-right">
         <div class="options" id="opts">${optsHtml}</div>
+        <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
         <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
       </div>
     </div>
@@ -1756,47 +2351,87 @@ function renderResult(app){
 
 function retakeWrong(){queue=shuffle([...wrong]);current=0;score=0;answered=false;wrong=[];render();}
 
+function flashAssess(knew){
+  trackAnswer(knew, pool[flashIdx].w);
+  flashNav(1);
+}
+
 function renderFlash(app){
   if(!pool.length){app.innerHTML='<div class="qcard" style="text-align:center;padding:2rem;color:var(--muted)">No words in this selection.</div>';return;}
   if(flashIdx>=pool.length)flashIdx=0;
   const item=pool[flashIdx];
-  const stateClass=flashState===0?'':flashState===1?' flipped':' sentence';
-  const stateLabel=flashState===0?'Word':flashState===1?'Definition':'Example Sentence';
+  const stateClass=flashState===0?'':' flipped';
+  const stateLabel=flashState===0?'Word':'Definition';
   let cardBody;
   if(flashState===0){
     cardBody=`<div class="flash-word">${item.w}</div>`;
-  } else if(flashState===1){
-    cardBody=`<div class="flash-def">${item.d}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
   } else {
     const sentence=(item.e||'No example available.').replace(
       new RegExp(`\\b(${item.w}\\w*)`, 'gi'),
       `<em>$1</em>`
     );
-    cardBody=`<div class="flash-sentence">${sentence}</div><div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>`;
+    cardBody=`
+      <div class="flash-split">
+        <div class="flash-split-col">
+          <div class="flash-split-label">Definition</div>
+          <div class="flash-def">${item.d}</div>
+          <div class="flash-lesson">Lesson ${item.l} · ${LESSON_NAMES[item.l]}</div>
+        </div>
+        <div class="flash-split-divider"></div>
+        <div class="flash-split-col">
+          <div class="flash-split-label">Example</div>
+          <div class="flash-sentence">${sentence}</div>
+        </div>
+      </div>`;
   }
+  const revealed = flashState > 0;
   app.innerHTML=`
-    <div class="stats">
-      <div class="stat"><div class="stat-label">Lesson</div><div class="stat-val">${item.l}</div></div>
-    </div>
-    <div class="flash-card${stateClass}" onclick="flipCard()">
-      <div class="flash-label">${stateLabel}</div>
+    <div class="flash-scene">
+    <div class="flash-card${stateClass}${revealed?' revealed':''}" onclick="flipCard()">
+      ${revealed?'':'<div class="flash-label">Word</div>'}
       ${cardBody}
+      ${!revealed?`<div class="flash-lesson-badge">Lesson ${item.l}</div>`:''}
     </div>
+    </div>
+    ${revealed ? `
+    <div class="flash-assess">
+      <button class="assess-btn assess-nope" onclick="flashAssess(false)">✕ Still learning</button>
+      <button class="assess-btn assess-got" onclick="flashAssess(true)">✓ Got it</button>
+      <div class="assess-divider"></div>
+      <div class="flash-assess-skip" onclick="flashNav(1)">Skip</div>
+    </div>
+    ` : `
     <div class="flash-nav">
-      <button class="fnav-btn" onclick="flashNav(-1)">← Back</button>
+      <button class="fnav-btn" onclick="flashNav(-1)" title="Back">←</button>
       <button class="fnav-toggle${flashShuffled?' on':''}" onclick="toggleFlashShuffle()">
-        <span>${flashShuffled?'⇄ Shuffled':'↕ Ordered'}</span>
-        <span class="toggle-label">${flashShuffled?'click for order':'click to shuffle'}</span>
+        ${flashShuffled?'⇄ Shuffled':'↕ Ordered'}
       </button>
-      <button class="fnav-btn" onclick="flashNav(1)">Forward →</button>
+      <button class="fnav-btn" onclick="flashNav(1)" title="Forward">→</button>
     </div>
-    <div class="kbd-hint" style="margin-top:10px;">
-      <span><kbd>←</kbd><kbd>→</kbd> navigate</span>
-      <span><kbd>Space</kbd> to cycle</span>
+    `}
+    <div class="flash-footer">
+      <span class="flash-footer-hint"><kbd>←</kbd><kbd>→</kbd> navigate · <kbd>Space</kbd> flip</span>
     </div>`;
 }
 
-function flipCard(){flashState=(flashState+1)%3;renderFlash(document.getElementById('app'));}
+function flipCard(){
+  const card = document.querySelector('.flash-card');
+  if (!card || card.classList.contains('flip-exit')) return;
+  card.classList.add('flip-exit');
+  setTimeout(() => {
+    flashState = (flashState + 1) % 2;
+    renderFlash(document.getElementById('app'));
+    const newCard = document.querySelector('.flash-card');
+    if (newCard) {
+      newCard.classList.add('flip-enter-start');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          newCard.classList.remove('flip-enter-start');
+        });
+      });
+    }
+  }, 180);
+}
 
 function flashNav(d){
   flashIdx=(flashIdx+d+pool.length)%pool.length;
@@ -1837,11 +2472,50 @@ function openGlossary(){
 
   body.innerHTML=Object.entries(LESSON_NAMES).map(([num,name])=>{
     const words=ALL.filter(x=>x.l===parseInt(num));
-    const entries=words.map(w=>`
-      <div class="glossary-entry">
-        <div class="glossary-word">${w.w}</div>
+    const entries=words.map(w=>{
+      const isHidden = hiddenWords.has(w.w);
+      const isSel = selectedWords.has(w.w);
+      // Personal accuracy badge (or hidden badge)
+      const s=wordStats[w.w];
+      let badge='';
+      if(isHidden){
+        badge=`<span class="hidden-badge" onclick="event.stopPropagation();hiddenWords.delete('${w.w}');saveHidden();openGlossary();" title="Click to restore">🚫 Hidden from quiz</span>`;
+      } else if(s && s.seen>0){
+        const pct=Math.round(s.correct/s.seen*100);
+        const bg=pct>=90?'var(--hm-great)':pct>=75?'var(--hm-good)':pct>=50?'var(--hm-mid)':'var(--hm-low)';
+        badge=`<span class="glossary-acc-badge" style="background:${bg}">${pct}% · ${s.seen} seen</span>`;
+      } else {
+        badge=`<span class="glossary-acc-badge" style="background:var(--hm-unseen);opacity:0.6">Not yet seen</span>`;
+      }
+      // Example sentence with the word highlighted
+      const exampleRaw=w.e||'';
+      const example=exampleRaw
+        ? `<div class="glossary-example">${exampleRaw.replace(new RegExp(`\\b(${w.w}\\w*)`, 'gi'), '<em>$1</em>')}</div>`
+        : '';
+      // Personal confusion pairs (student-specific, from quiz history)
+      let confused='';
+      if(s && s.confusedWith){
+        const pairs=Object.entries(s.confusedWith).sort((a,b)=>b[1]-a[1]).slice(0,2);
+        if(pairs.length){
+          confused=`<div class="glossary-confused">⚡ Often confused with: ${pairs.map(([cw,n])=>`<strong>${cw}</strong> (${n}×)`).join(', ')}</div>`;
+        }
+      }
+      // Curated confusion note (global — shown for all students)
+      let curatedNote='';
+      const siblings=CONFUSED_MAP[w.w];
+      if(siblings && siblings.length){
+        curatedNote=`<div class="glossary-confused-curated">⚠️ Commonly confused with: ${siblings.map(cw=>`<strong>${cw}</strong>`).join(', ')}</div>`;
+      }
+      return `
+      <div class="glossary-entry${isHidden?' gl-hidden':''}${isSel?' gl-selected':''}" data-word="${w.w}" onclick="toggleWordSelect('${w.w}')">
+        <div class="gl-check">${isSel?'✓':''}</div>
+        <div class="glossary-word-row">
+          <div class="glossary-word">${w.w}</div>${badge}
+        </div>
         <div class="glossary-def">${w.d}</div>
-      </div>`).join('');
+        ${example}${curatedNote}${confused}
+      </div>`;
+    }).join('');
     return `<div class="glossary-lesson" id="gl-lesson-${num}" data-lesson="${num}">
       <div class="glossary-lesson-header" id="gl-header-${num}">
         <span class="glossary-lesson-num">Lesson ${num}</span>
@@ -1911,6 +2585,10 @@ function closeGlossary(){
 
 selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
+if(localStorage.getItem('vocab_settings_collapsed')==='1'){
+  const p=document.getElementById('settings-panel');
+  if(p) p.classList.add('collapsed');
+}
 
 document.addEventListener('keydown', e => {
 
@@ -1978,10 +2656,13 @@ function openHeatmap() {
       if (stats.seen > 0) seen++;
       total++;
       const pct = stats.seen > 0 ? Math.round((stats.correct / stats.seen) * 100) : null;
+      const isHidden = hiddenWords.has(item.w);
 
       const cell = document.createElement('div');
-      cell.className = 'heatmap-cell';
+      cell.className = 'heatmap-cell' + (isHidden ? ' hm-hidden' : '') + (selectedWords.has(item.w) ? ' hm-selected' : '');
       cell.style.background = hmColor(stats);
+      cell.dataset.word = item.w;
+      cell.onclick = () => toggleWordSelect(item.w);
 
       const lbl = document.createElement('div');
       lbl.className = 'heatmap-cell-label';
@@ -1989,7 +2670,14 @@ function openHeatmap() {
 
       const tip = document.createElement('div');
       tip.className = 'heatmap-cell-tooltip';
-      tip.innerHTML = `<strong>${item.w}</strong><br>${stats.seen === 0 ? 'Not yet seen' : `${pct}% correct (${stats.correct}/${stats.seen})`}`;
+      tip.innerHTML = `<strong>${item.w}</strong><br>${isHidden ? '🚫 Hidden from quiz' : stats.seen === 0 ? 'Not yet seen' : `${pct}% correct (${stats.correct}/${stats.seen})`}`;
+
+      if(isHidden){
+        const hiddenIcon = document.createElement('div');
+        hiddenIcon.className = 'hm-hidden-icon';
+        hiddenIcon.textContent = '🚫';
+        cell.appendChild(hiddenIcon);
+      }
 
       cell.appendChild(lbl);
       cell.appendChild(tip);
@@ -1998,7 +2686,7 @@ function openHeatmap() {
   });
 
   document.getElementById('heatmap-sub').textContent =
-    `${seen} of ${total} words practiced`;
+    `${seen}/150 Words Practiced`;
 
   overlay.style.display = 'block';
   requestAnimationFrame(() => overlay.style.opacity = '1');
@@ -2317,9 +3005,11 @@ function updateAuthUI(user) {
   const badge = document.getElementById('user-badge');
 
   const syncBtn = document.getElementById('badge-refresh-btn');
+  const hmSyncBtn = document.getElementById('heatmap-refresh-btn');
   if (!isGoogleUser(user)) {
     badge.style.display = 'none';
     if (syncBtn) syncBtn.style.display = 'none';
+    if (hmSyncBtn) hmSyncBtn.style.display = 'none';
     document.getElementById('signin-wrap').style.display = 'flex';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
@@ -2330,6 +3020,7 @@ function updateAuthUI(user) {
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     if (syncBtn) syncBtn.style.display = '';
+    if (hmSyncBtn) hmSyncBtn.style.display = '';
     const googleData = user.providerData && user.providerData.find(p => p.providerId === 'google.com');
     const displayName = (cachedGoogleProfile && cachedGoogleProfile.name)
       || (googleData && googleData.displayName)
@@ -2526,6 +3217,9 @@ async function signOutGoogle() {
   sessionStartTime = null;
   sessionQuestionsAnswered = 0;
   sessionCorrectAnswers = 0;
+  pendingAnswers = 0;
+  pendingCorrect = 0;
+  flushCount = 0;
   cachedGoogleProfile = null;
   updateAuthUI(null);
 
@@ -2562,6 +3256,10 @@ async function syncFromFirestore() {
         wordStats[word] = stat;
       }
     }
+    // Sync hidden words (union of local + remote)
+    const remoteHidden = data.hiddenWords || [];
+    remoteHidden.forEach(w => hiddenWords.add(w));
+    if(remoteHidden.length) localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
     // Sync activity days (union of local + remote)
     const remoteDays = data.activityDays || [];
     remoteDays.forEach(d => { if (!activityDays.includes(d)) activityDays.push(d); });
@@ -2587,6 +3285,9 @@ async function manualSync(btn) {
 }
 
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
+// flushTimer and syncTimer are merged into one interval to halve the number of
+// concurrent Firestore round-trips. syncGlobalStats (a read+write) runs only every
+// 5th flush (~5 min) instead of every minute.
 function startSecondTimer() {
   stopTimers();
   secondTimer = setInterval(() => {
@@ -2604,25 +3305,24 @@ function startSecondTimer() {
       localUserSeconds++;
     }
   }, 1000);
-  // Flush elapsed seconds (incrementing stats/global/totalSeconds atomically),
-  // then read that value back to write totalTime — guaranteeing totalTime is always
-  // derived from the actual stored totalSeconds, never from a local running counter.
+  // Single interval handles flushing, syncing from Firestore, and periodic global stat sync.
+  // syncFromFirestore piggybacks here — no separate syncTimer needed.
+  // syncGlobalStats does a read+write just to format a number, so it runs every 5 min (every
+  // 5th flush) rather than every minute. totalSeconds accuracy is unaffected.
   flushTimer = setInterval(async () => {
     await flushTime();
-    syncGlobalStats();
-  }, 60000);
-  syncTimer = setInterval(() => {
     syncFromFirestore();
+    flushCount++;
+    if (flushCount % 5 === 0) syncGlobalStats();
   }, 60000);
 }
 
 function stopTimers() {
   clearInterval(secondTimer);
   clearInterval(flushTimer);
-  clearInterval(syncTimer);
+  // syncTimer was merged into flushTimer — no longer a separate interval
   secondTimer = null;
   flushTimer = null;
-  syncTimer = null;
 }
 
 function flushTime() {
@@ -2633,12 +3333,24 @@ function flushTime() {
   const summaryRef = db.collection("users").doc(fbUser.uid);
   const FV = firebase.firestore.FieldValue;
 
+  // Drain the answer buffer accumulated by trackAnswer() since the last flush.
+  // This replaces the per-answer Firestore writes that previously fired on every question.
+  const answersToFlush = pendingAnswers;
+  const correctToFlush = pendingCorrect;
+  pendingAnswers = 0;
+  pendingCorrect = 0;
+
   const wordUpdates = {};
   for (const [word, stat] of Object.entries(wordStats)) {
     wordUpdates[`wordStats.${word}`] = stat;
   }
   if (activityDays.length) {
     wordUpdates.activityDays = FV.arrayUnion(...activityDays);
+  }
+  // Include buffered answer counts in the batch write (if any)
+  if (answersToFlush > 0) {
+    wordUpdates.totalQuestionsAnswered = FV.increment(answersToFlush);
+    if (correctToFlush > 0) wordUpdates.totalCorrectAnswers = FV.increment(correctToFlush);
   }
 
   if (elapsed > 0) {
@@ -2649,11 +3361,34 @@ function flushTime() {
     db.collection("stats").doc("global")
       .set({ totalSeconds: FV.increment(elapsed) }, { merge: true })
       .catch(err => console.warn("global totalSeconds write failed:", err));
+    // Batch the global question counters with the totalSeconds write to avoid a second
+    // round-trip. Only write them here if there are pending counts to flush.
+    if (answersToFlush > 0) {
+      db.collection("stats").doc("global").set({
+        totalQuestionsAnswered: FV.increment(answersToFlush),
+        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
+      }, { merge: true }).catch(err => console.warn("global answer count write failed:", err));
+    }
     return Promise.all([
       userRef.update({ userSeconds: FV.increment(elapsed), totalTime: fmt, ...wordUpdates }),
-      summaryRef.set({ userSeconds: localUserSeconds, totalTime: fmt }, { merge: true })
+      summaryRef.set({
+        userSeconds: localUserSeconds, totalTime: fmt,
+        ...(answersToFlush > 0 ? { totalQuestionsAnswered: FV.increment(answersToFlush) } : {}),
+        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
+      }, { merge: true })
     ]);
   } else if (Object.keys(wordUpdates).length) {
+    // No new time elapsed, but wordStats or answer counts changed — write those only.
+    if (answersToFlush > 0) {
+      db.collection("stats").doc("global").set({
+        totalQuestionsAnswered: FV.increment(answersToFlush),
+        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
+      }, { merge: true }).catch(err => console.warn("global answer count write failed:", err));
+      summaryRef.set({
+        totalQuestionsAnswered: FV.increment(answersToFlush),
+        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
+      }, { merge: true }).catch(() => {});
+    }
     return userRef.update(wordUpdates);
   }
   return Promise.resolve();
@@ -2691,25 +3426,11 @@ function trackAnswer(isRight, word) {
   sessionQuestionsAnswered++;
   if (isRight) sessionCorrectAnswers++;
 
-  const FV = firebase.firestore.FieldValue;
-  const inc1 = FV.increment(1);
-  // Dot-notation key writes only this word's entry; arrayUnion appends only if the day is new.
-  // Both avoid replacing sibling data written by other devices at the same time.
-  const wordUpdate = word ? { [`wordStats.${word}`]: wordStats[word] } : {};
-  db.collection("userData").doc(fbUser.uid).update({
-    totalQuestionsAnswered: inc1,
-    activityDays: FV.arrayUnion(today),
-    ...wordUpdate,
-    ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  });
-  db.collection("users").doc(fbUser.uid).set({
-    totalQuestionsAnswered: inc1,
-    ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  }, { merge: true });
-  db.collection("stats").doc("global").set({
-    totalQuestionsAnswered: inc1,
-    ...(isRight ? { totalCorrectAnswers: inc1 } : {})
-  }, { merge: true });
+  // Buffer the answer — flushTime() drains these every 60s (and on tab hide/close),
+  // collapsing what were previously 3 immediate Firestore writes per answer into a
+  // single batched write. wordStats is already flushed by flushTime() separately.
+  pendingAnswers++;
+  if (isRight) pendingCorrect++;
 }
 
 // Saves a session record when the user leaves or signs out.
