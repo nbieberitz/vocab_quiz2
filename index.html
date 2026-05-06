@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <style>
 :root{
   --bg:#05080f;
@@ -1881,8 +1882,7 @@ let hiddenWords   = new Set(JSON.parse(localStorage.getItem('vocab_hidden')||'[]
 function saveHidden(){
   localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
   if(fbUser){
-    db.collection("userData").doc(fbUser.uid)
-      .update({hiddenWords:[...hiddenWords]}).catch(()=>{});
+    _cfSaveHidden({ hiddenWords: [...hiddenWords] }).catch(()=>{});
   }
 }
 
@@ -2833,6 +2833,19 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// ── Cloud Function callables — all Firestore writes go through here ───────────
+const functions        = firebase.functions();
+const _cfInitUserDoc     = functions.httpsCallable('initUserDoc');
+const _cfFlushUserData   = functions.httpsCallable('flushUserData');
+const _cfSyncGlobalStats = functions.httpsCallable('syncGlobalStats');
+const _cfEndSession      = functions.httpsCallable('endSession');
+const _cfSavePreferences = functions.httpsCallable('savePreferences');
+const _cfSaveHidden      = functions.httpsCallable('saveHidden');
+const _cfPushImport      = functions.httpsCallable('pushImportToFirestore');
+const _cfWriteEmail      = functions.httpsCallable('writeEmail');
+const _cfDeleteAnonDocs  = functions.httpsCallable('deleteAnonDocs');
+const _cfMergeAnonData   = functions.httpsCallable('mergeAnonData');
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
@@ -2862,8 +2875,7 @@ auth.onAuthStateChanged(async user => {
     fbUser = user;
     // If this is a just-upgraded Google account, write the email now
     if (user.email) {
-      db.collection("userData").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
-      db.collection("users").doc(user.uid).set({ email: user.email }, { merge: true }).catch(() => {});
+      _cfWriteEmail({ email: user.email }).catch(() => {});
     }
     updateAuthUI(user);
     return;
@@ -2881,176 +2893,28 @@ auth.onAuthStateChanged(async user => {
 });
 
 async function initUserDoc(user) {
-  const uid = user.uid;
-  const userRef = db.collection("userData").doc(uid);
-  const summaryRef = db.collection("users").doc(uid);
-  const statsRef = db.collection("stats").doc("global");
-  const snap = await userRef.get();
-  const statsSnap = await statsRef.get();
-
-  if (!snap.exists) {
-    // Check if this user has legacy data in the old "users" collection (schema migration case)
-    const legacySnap = await summaryRef.get();
-    const isLegacy = legacySnap.exists &&
-      (legacySnap.data().wordStats !== undefined || legacySnap.data().userNumber !== undefined);
-
-    if (isLegacy) {
-      // ── Migration: copy full data → "individual user data", trim "users" to summary ──
-      const old = legacySnap.data();
-      await userRef.set({
-        ...old,
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        sessionCount: firebase.firestore.FieldValue.increment(1)
-      });
-      // Replace "users" doc entirely with only the 5 summary fields
-      const resolvedEmail = old.email || (user.email || null);
-      await summaryRef.set({
-        ...(resolvedEmail ? { email: resolvedEmail } : {}),
-        sessionCount: (old.sessionCount || 0) + 1,
-        totalTime: old.totalTime || "00:00:00",
-        totalQuestionsAnswered: old.totalQuestionsAnswered || 0,
-        totalCorrectAnswers: old.totalCorrectAnswers || 0
-      });
-      localUserSeconds = parseHMS(old.totalTime || "00:00:00");
-      lastFlushUserSeconds = localUserSeconds;
-      wordStats = old.wordStats || {};
-      activityDays = old.activityDays || [];
-      sessionHistory = old.sessionHistory || [];
-      try {
-        applyPreferences(old.preferences || {});
-      } catch (err) {
-        console.warn("applyPreferences error:", err);
-      }
-    } else if (user.isAnonymous) {
-      // Anonymous user — persist data locally but don't count in totalUsers or create a users summary.
-      // Marked isAnonymous:true so the returning-user branch can detect and promote when they sign in.
-      await userRef.set({
-        firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        userSeconds: 0,
-        totalTime: "00:00:00",
-        totalQuestionsAnswered: 0,
-        totalCorrectAnswers: 0,
-        sessionCount: 1,
-        wordStats: {},
-        activityDays: [],
-        sessionHistory: [],
-        preferences: {},
-        isAnonymous: true
-      });
-      localUserSeconds = 0;
-      lastFlushUserSeconds = 0;
-      wordStats = {};
-    } else {
-      // Brand-new Google user — assign a number and create their doc with summary
-      await db.runTransaction(async t => {
-        const ss = await t.get(statsRef);
-        const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
-        const userNumber = count + 1;
-        t.set(statsRef, {
-          totalUsers: userNumber,
-          totalSeconds: 0,
-          totalQuestionsAnswered: 0,
-          totalCorrectAnswers: 0
-        }, { merge: true });
-        const userData = {
-          userNumber,
-          firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-          userSeconds: 0,
-          totalTime: "00:00:00",
-          totalQuestionsAnswered: 0,
-          totalCorrectAnswers: 0,
-          sessionCount: 1,
-          wordStats: {},
-          activityDays: [],
-          sessionHistory: [],
-          preferences: {},
-          ...(user.email ? { email: user.email } : {})
-        };
-        t.set(userRef, userData);
-        t.set(summaryRef, {
-          ...(user.email ? { email: user.email } : {}),
-          sessionCount: 1,
-          userSeconds: 0,
-          totalTime: "00:00:00",
-          totalQuestionsAnswered: 0,
-          totalCorrectAnswers: 0
-        });
-      });
-      localUserSeconds = 0;
-      lastFlushUserSeconds = 0;
-      wordStats = {};
-    }
-  } else {
-    // Returning user — doc already exists in userData
-    const wasAnon = snap.data().isAnonymous === true;
-    if (wasAnon && user.email) {
-      // Promotion: anonymous → Google (same UID via linkWithPopup succeeding).
-      // Now we count them as a real user: assign userNumber, create users summary, increment totalUsers,
-      // and strip the isAnonymous flag so this branch never re-runs for the same user.
-      await db.runTransaction(async t => {
-        const ss = await t.get(statsRef);
-        const count = ss.exists ? (ss.data().totalUsers || 0) : 0;
-        const userNumber = count + 1;
-        t.set(statsRef, { totalUsers: userNumber }, { merge: true });
-        t.set(userRef, {
-          isAnonymous: firebase.firestore.FieldValue.delete(),
-          userNumber,
-          email: user.email,
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-          sessionCount: firebase.firestore.FieldValue.increment(1)
-        }, { merge: true });
-        t.set(summaryRef, {
-          email: user.email,
-          sessionCount: (snap.data().sessionCount || 0) + 1,
-          userSeconds: snap.data().userSeconds || 0,
-          totalTime: snap.data().totalTime || "00:00:00",
-          totalQuestionsAnswered: snap.data().totalQuestionsAnswered || 0,
-          totalCorrectAnswers: snap.data().totalCorrectAnswers || 0
-        });
-      });
-    } else {
-      // Regular returning Google user
-      await userRef.set({
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-        sessionCount: firebase.firestore.FieldValue.increment(1),
-        ...(user.email ? { email: user.email } : {})
-      }, { merge: true });
-      await summaryRef.set({
-        sessionCount: firebase.firestore.FieldValue.increment(1),
-        ...(user.email ? { email: user.email } : {})
-      }, { merge: true });
-    }
-    localUserSeconds = snap.data().userSeconds || parseHMS(snap.data().totalTime || "00:00:00");
-    lastFlushUserSeconds = localUserSeconds;
-    wordStats = snap.data().wordStats || {};
-    activityDays = snap.data().activityDays || [];
-    sessionHistory = snap.data().sessionHistory || [];
-    // Apply synced preferences after wordStats is loaded (adaptive mode needs it)
-    try {
-      applyPreferences(snap.data().preferences || {});
-    } catch (err) {
-      console.warn("applyPreferences error:", err);
-    }
-  }
-  // Mark session start for history tracking
-  sessionStartTime = Date.now();
-  sessionQuestionsAnswered = 0;
-  sessionCorrectAnswers = 0;
+  const result = await _cfInitUserDoc({
+    email:       user.email || null,
+    isAnonymous: user.isAnonymous || false
+  });
+  const data = result.data;
+  localUserSeconds      = data.userSeconds    || 0;
+  lastFlushUserSeconds  = localUserSeconds;
+  wordStats             = data.wordStats      || {};
+  activityDays          = data.activityDays   || [];
+  sessionHistory        = data.sessionHistory || [];
+  try { applyPreferences(data.preferences || {}); } catch (err) { console.warn("applyPreferences error:", err); }
 }
 
 // ── Preference sync ───────────────────────────────────────────────────────────
 function savePreferences() {
   if (!fbUser) return;
-  db.collection("userData").doc(fbUser.uid).set({
-    preferences: {
-      theme: localStorage.getItem('vocab_theme') || 'dark',
-      mode: mode,
-      dir: dir,
-      lastLesson: selectedLesson
-    }
-  }, { merge: true }).catch(() => {});
+  _cfSavePreferences({
+    theme: localStorage.getItem('vocab_theme') || 'dark',
+    mode: mode,
+    dir: dir,
+    lastLesson: selectedLesson
+  }).catch(() => {});
 }
 
 function applyPreferences(prefs) {
@@ -3182,12 +3046,7 @@ function signInWithGoogle() {
       }
       // Ensure doc exists then write email (set+merge handles new and existing users)
       if (fbUser.email) {
-        db.collection("userData").doc(fbUser.uid)
-          .set({ email: fbUser.email }, { merge: true })
-          .catch(err => console.error("email write failed:", err.code, err.message));
-        db.collection("users").doc(fbUser.uid)
-          .set({ email: fbUser.email }, { merge: true })
-          .catch(err => console.error("email summary write failed:", err.code, err.message));
+        _cfWriteEmail({ email: fbUser.email }).catch(err => console.error("email write failed:", err.code, err.message));
       }
       // Create full user doc if it doesn't exist yet
       try { await initUserDoc(fbUser); } catch(e) { console.error("initUserDoc:", e); }
@@ -3221,8 +3080,7 @@ function signInWithGoogle() {
           // authenticated — security rules allow this. After delete() is called
           // the anon Auth session is gone and the delete would be rejected.
           if (anonUid) {
-            await db.collection("userData").doc(anonUid).delete().catch(() => {});
-            await db.collection("users").doc(anonUid).delete().catch(() => {});
+            await _cfDeleteAnonDocs({ anonUid }).catch(() => {});
           }
           if (anonUser && anonUser.isAnonymous) {
             await anonUser.delete().catch(() => auth.signOut());
@@ -3264,27 +3122,19 @@ function signInWithGoogle() {
           const savedQ = saved.totalQuestionsAnswered || 0;
           const savedC = saved.totalCorrectAnswers || 0;
 
-          await userRef.set({
-            wordStats,
-            userSeconds: localUserSeconds,
-            totalTime: fmtHMS(localUserSeconds),
-            activityDays: savedDays,
-            sessionHistory: mergedSessions,
-            totalQuestionsAnswered: savedQ + sessionQuestionsAnswered,
-            totalCorrectAnswers: savedC + sessionCorrectAnswers,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-            ...(fbUser.email ? { email: fbUser.email } : {})
-          }, { merge: true });
-          await db.collection("users").doc(fbUser.uid).set({
-            ...(fbUser.email ? { email: fbUser.email } : {}),
-            sessionCount: firebase.firestore.FieldValue.increment(1),
-            // Use increment for the anon-session seconds so two simultaneous sign-ins
-            // add their time rather than one overwriting the other.
-            userSeconds: firebase.firestore.FieldValue.increment(localSeconds),
-            totalTime: fmtHMS(localUserSeconds),
-            totalQuestionsAnswered: firebase.firestore.FieldValue.increment(sessionQuestionsAnswered),
-            totalCorrectAnswers: firebase.firestore.FieldValue.increment(sessionCorrectAnswers)
-          }, { merge: true });
+          await _cfMergeAnonData({
+            wordStats:               wordStats,
+            localUserSeconds:        localUserSeconds,
+            totalTime:               fmtHMS(localUserSeconds),
+            activityDays:            savedDays,
+            mergedSessions:          mergedSessions,
+            totalQuestionsAnswered:  savedQ + sessionQuestionsAnswered,
+            totalCorrectAnswers:     savedC + sessionCorrectAnswers,
+            email:                   fbUser.email || null,
+            localSeconds:            localSeconds,
+            sessionQuestionsAnswered: sessionQuestionsAnswered,
+            sessionCorrectAnswers:   sessionCorrectAnswers
+          });
           // Sync globals to the merged values — flushTime() and endSession() write
           // from these, so they must reflect the full merged state, not just anon data.
           activityDays = savedDays;
@@ -3448,84 +3298,34 @@ function flushTime() {
   if (!fbUser) return Promise.resolve();
   const elapsed = localUserSeconds - lastFlushUserSeconds;
   lastFlushUserSeconds = localUserSeconds;
-  const userRef = db.collection("userData").doc(fbUser.uid);
-  const summaryRef = db.collection("users").doc(fbUser.uid);
-  const FV = firebase.firestore.FieldValue;
+  const fmt = fmtHMS(localUserSeconds);
 
-  // Drain the answer buffer accumulated by trackAnswer() since the last flush.
-  // This replaces the per-answer Firestore writes that previously fired on every question.
   const answersToFlush = pendingAnswers;
   const correctToFlush = pendingCorrect;
   pendingAnswers = 0;
   pendingCorrect = 0;
 
-  const wordUpdates = {};
-  for (const [word, stat] of Object.entries(wordStats)) {
-    wordUpdates[`wordStats.${word}`] = stat;
-  }
-  if (activityDays.length) {
-    wordUpdates.activityDays = FV.arrayUnion(...activityDays);
-  }
-  // Include buffered answer counts in the batch write (if any)
-  if (answersToFlush > 0) {
-    wordUpdates.totalQuestionsAnswered = FV.increment(answersToFlush);
-    if (correctToFlush > 0) wordUpdates.totalCorrectAnswers = FV.increment(correctToFlush);
+  // Nothing to write — skip the Cloud Function call entirely.
+  if (elapsed === 0 && Object.keys(wordStats).length === 0 && answersToFlush === 0) {
+    return Promise.resolve();
   }
 
-  if (elapsed > 0) {
-    const fmt = fmtHMS(localUserSeconds);
-    // Atomically increment global totalSeconds. totalTime is NOT written here —
-    // syncGlobalStats reads it back after the write and derives totalTime from it,
-    // so totalTime is always purely based on the server-stored totalSeconds.
-    db.collection("stats").doc("global")
-      .set({ totalSeconds: FV.increment(elapsed) }, { merge: true })
-      .catch(err => console.warn("global totalSeconds write failed:", err));
-    // Batch the global question counters with the totalSeconds write to avoid a second
-    // round-trip. Only write them here if there are pending counts to flush.
-    if (answersToFlush > 0) {
-      db.collection("stats").doc("global").set({
-        totalQuestionsAnswered: FV.increment(answersToFlush),
-        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
-      }, { merge: true }).catch(err => console.warn("global answer count write failed:", err));
-    }
-    return Promise.all([
-      userRef.update({ userSeconds: FV.increment(elapsed), totalTime: fmt, ...wordUpdates }),
-      summaryRef.set({
-        userSeconds: localUserSeconds, totalTime: fmt,
-        ...(answersToFlush > 0 ? { totalQuestionsAnswered: FV.increment(answersToFlush) } : {}),
-        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
-      }, { merge: true })
-    ]);
-  } else if (Object.keys(wordUpdates).length) {
-    // No new time elapsed, but wordStats or answer counts changed — write those only.
-    if (answersToFlush > 0) {
-      db.collection("stats").doc("global").set({
-        totalQuestionsAnswered: FV.increment(answersToFlush),
-        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
-      }, { merge: true }).catch(err => console.warn("global answer count write failed:", err));
-      summaryRef.set({
-        totalQuestionsAnswered: FV.increment(answersToFlush),
-        ...(correctToFlush > 0 ? { totalCorrectAnswers: FV.increment(correctToFlush) } : {})
-      }, { merge: true }).catch(() => {});
-    }
-    return userRef.update(wordUpdates);
-  }
-  return Promise.resolve();
+  return _cfFlushUserData({
+    elapsed,
+    localUserSeconds,
+    totalTime:      fmt,
+    wordStats,
+    activityDays,
+    answersToFlush,
+    correctToFlush
+  }).catch(err => console.warn("flushUserData CF error:", err));
 }
 
-// Reads stats/global/totalSeconds — kept accurate by atomic increments in flushTime —
-// and writes totalTime purely as fmtHMS(totalSeconds). No userData collection scan.
-// Requires stats/global to be readable in Firestore rules:
-//   match /stats/{doc} { allow read: if true; allow write: if request.auth != null; }
 async function syncGlobalStats() {
   try {
-    const snap = await db.collection("stats").doc("global").get();
-    const total = snap.exists ? (snap.data().totalSeconds || 0) : 0;
-    await db.collection("stats").doc("global").set({
-      totalTime: fmtHMS(total)
-    }, { merge: true });
+    await _cfSyncGlobalStats();
   } catch (err) {
-    console.warn("syncGlobalStats error:", err);
+    console.warn("syncGlobalStats CF error:", err);
   }
 }
 
@@ -3563,11 +3363,7 @@ function endSession() {
     duration: duration
   };
   sessionHistory = [...sessionHistory, record].slice(-50); // keep local copy trimmed
-  // arrayUnion appends the record atomically — two devices writing at the same time
-  // each add their own record instead of one overwriting the other.
-  db.collection("userData").doc(fbUser.uid).update({
-    sessionHistory: firebase.firestore.FieldValue.arrayUnion(record)
-  }).catch(() => {});
+  _cfEndSession({ record }).catch(() => {});
   // Reset so duplicate calls don't double-record
   sessionStartTime = Date.now();
   sessionQuestionsAnswered = 0;
@@ -3761,41 +3557,21 @@ function applySaveCode(code) {
   pushImportToFirestore();
 }
 
-// Immediately writes all imported data to Firestore so the new device is in
+// Immediately writes all imported data via Cloud Function so the new device is in
 // sync right away, rather than waiting for the next 60-second flush cycle.
 async function pushImportToFirestore() {
   if (!fbUser) return;
   try {
-    const FV = firebase.firestore.FieldValue;
-    const userRef    = db.collection("userData").doc(fbUser.uid);
-    const summaryRef = db.collection("users").doc(fbUser.uid);
-    const fmt = fmtHMS(localUserSeconds);
-
-    // Build per-word stat map
-    const wordUpdates = {};
-    for (const [word, stat] of Object.entries(wordStats)) {
-      wordUpdates[`wordStats.${word}`] = stat;
-    }
-
-    await Promise.all([
-      userRef.set({
-        ...wordUpdates,
-        userSeconds:  localUserSeconds,
-        totalTime:    fmt,
-        activityDays: activityDays.length ? FV.arrayUnion(...activityDays) : [],
-        hiddenWords:  [...hiddenWords],
-        lastSeen:     FV.serverTimestamp(),
-      }, { merge: true }),
-      summaryRef.set({
-        userSeconds: localUserSeconds,
-        totalTime:   fmt,
-      }, { merge: true }),
-    ]);
-
-    // Sync the flush baseline so flushTime() doesn't double-count imported seconds
+    await _cfPushImport({
+      wordStats,
+      userSeconds:  localUserSeconds,
+      totalTime:    fmtHMS(localUserSeconds),
+      activityDays,
+      hiddenWords:  [...hiddenWords],
+    });
     lastFlushUserSeconds = localUserSeconds;
   } catch (err) {
-    console.warn("pushImportToFirestore error:", err);
+    console.warn("pushImportToFirestore CF error:", err);
   }
 }
 
