@@ -6,6 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <title>Vocab Quiz</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -105,80 +106,7 @@ body.light .flash-card::before{
   background:linear-gradient(90deg,transparent,rgba(0,119,204,0.12),transparent);
 }
 
-/* Google sign-in button */
-.google-signin-btn{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:8px 16px;
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:20px;
-  color:var(--text);
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.07em;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:all .15s;
-  width:fit-content;
-}
-.google-signin-btn:hover{
-  border-color:var(--accent);
-  color:var(--accent);
-  box-shadow:0 0 14px var(--glow);
-}
-.google-signin-btn:disabled{
-  opacity:0.45;cursor:not-allowed;
-  border-color:var(--border);
-}
-.google-signin-btn svg{flex-shrink:0;}
 
-/* Signed-in user badge */
-.user-badge{
-  display:flex;align-items:center;gap:8px;
-  padding:5px 12px 5px 8px;
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:20px;
-  width:fit-content;
-}
-.user-badge-avatar{
-  width:22px;height:22px;
-  border-radius:50%;
-  object-fit:cover;
-  border:1px solid var(--border2);
-  flex-shrink:0;
-}
-.user-badge-name{
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.06em;
-  color:var(--text);
-  opacity:0.85;
-  max-width:120px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.user-badge-signout{
-  background:transparent;border:none;
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.07em;
-  text-transform:uppercase;
-  color:var(--muted);
-  cursor:pointer;padding:0;
-  transition:color .15s;
-  flex-shrink:0;
-}
-.user-badge-signout:hover{color:var(--wrong);}
-.user-badge-refresh{
-  background:transparent;border:none;
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.07em;
-  text-transform:uppercase;
-  color:var(--muted);
-  cursor:pointer;padding:0;
-  transition:color .15s;
-  flex-shrink:0;
-}
-.user-badge-refresh:hover{color:var(--accent);}
-.user-badge-refresh.spinning svg{animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
 
 .adaptive-word-badge{
   display:inline-block;
@@ -1392,6 +1320,122 @@ kbd{
   background:var(--surface2);
   box-shadow:0 2px 0 var(--border2);
 }
+
+/* ── Save / Load Code Modal ──────────────────────────────────────────────── */
+.savecode-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(5,8,15,0.82);
+  z-index:200;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);
+  animation:fadeUp .2s ease both;
+}
+.savecode-overlay.open{display:flex;}
+.savecode-modal{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  padding:2rem;
+  width:min(520px,92vw);
+  box-shadow:0 8px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(0,200,255,0.06);
+  display:flex;flex-direction:column;gap:1.4rem;
+}
+.savecode-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.savecode-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.8rem;letter-spacing:0.06em;
+  color:var(--text);
+}
+.savecode-title em{font-style:normal;color:var(--accent);}
+.savecode-section-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.savecode-textarea{
+  width:100%;height:90px;
+  background:var(--bg);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.02em;
+  line-height:1.6;
+  padding:10px 12px;
+  resize:none;
+  outline:none;
+  transition:border-color .15s;
+  word-break:break-all;
+}
+.savecode-textarea:focus{border-color:var(--accent);}
+.savecode-textarea.import-area{height:75px;}
+.savecode-row{display:flex;gap:8px;margin-top:8px;}
+.savecode-btn{
+  padding:8px 18px;
+  border-radius:30px;
+  border:1px solid var(--border2);
+  background:transparent;
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:0.07em;
+  text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+  color:var(--text);
+  white-space:nowrap;
+}
+.savecode-btn:hover{border-color:var(--accent);color:var(--accent);}
+.savecode-btn.primary{
+  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
+  border-color:transparent;color:#050810;
+  box-shadow:0 0 14px rgba(0,212,255,0.3);
+}
+.savecode-btn.primary:hover{filter:brightness(1.08);box-shadow:0 0 20px rgba(0,212,255,0.45);}
+.savecode-btn.danger{border-color:rgba(255,92,122,0.4);color:var(--wrong);}
+.savecode-btn.danger:hover{background:var(--wrong-bg);}
+.savecode-divider{
+  border:none;border-top:1px solid var(--border);
+  margin:0;
+}
+.savecode-status{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.07em;
+  text-transform:uppercase;
+  padding:6px 12px;
+  border-radius:20px;
+  display:none;
+}
+.savecode-status.ok{
+  display:inline-block;
+  background:var(--correct-bg);
+  border:1px solid var(--correct-border);
+  color:var(--correct);
+}
+.savecode-status.err{
+  display:inline-block;
+  background:var(--wrong-bg);
+  border:1px solid var(--wrong-border);
+  color:var(--wrong);
+}
+.savecode-hint{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:0.05em;
+  color:var(--muted);
+  line-height:1.7;
+  margin-top:2px;
+}
+/* ── Spam protection toast ── */
+#spam-toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--wrong,#e05c5c);color:#fff;
+  padding:10px 20px;border-radius:10px;font-size:13.5px;font-weight:600;
+  letter-spacing:.02em;pointer-events:none;z-index:9999;
+  opacity:0;transition:opacity .25s ease,transform .25s ease;
+  white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.25);
+}
+#spam-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -1402,14 +1446,10 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v2.1.5</span>
+      <span class="version-tag">v3.1.2</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
-        <button class="glossary-btn" id="badge-refresh-btn" onclick="manualSync(this)" title="Sync data" style="display:none">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sync
-        </button>
         <button class="glossary-btn" onclick="openGlossary()" title="View all words & definitions">
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="1" y="2" width="12" height="1.4" rx="0.7" fill="currentColor"/>
@@ -1440,36 +1480,54 @@ kbd{
           <span id="theme-icon">🌙</span>
         </div>
       </div>
-      <!-- Google sign-in button (shown when not signed in with Google) -->
-      <div id="signin-wrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-        <button class="google-signin-btn" id="google-signin-btn" onclick="signInWithGoogle()">
-          <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-            <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="glossary-btn" onclick="openSaveCode()" title="Export / import your progress">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 10v1.5A0.5.0.5 0 0 0 2.5 12h9a0.5.0.5 0 0 0 0.5-0.5V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
           </svg>
-          Sign in with Google
+          Save/Load Data
         </button>
-        <span id="signin-hint" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.07em;color:var(--text);opacity:0.5;display:flex;align-items:center;gap:4px">
-          <svg width="9" height="9" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.6;flex-shrink:0">
-            <rect x="2" y="5.5" width="8" height="5.5" rx="1.2" fill="currentColor"/>
-            <path d="M4 5.5V3.5a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
-          </svg>
-          Sign in to save your progress
-        </span>
-      </div>
-      <!-- User badge (shown when signed in with Google) -->
-      <div class="user-badge" id="user-badge" style="display:none">
-        <img class="user-badge-avatar" id="user-avatar" src="" alt="" referrerpolicy="no-referrer">
-        <span class="user-badge-name" id="user-display-name"></span>
-        <button class="user-badge-signout" onclick="signOutGoogle()" title="Sign out">Sign out</button>
       </div>
 
     </div>
   </div>
 
+  <!-- Save / Load Code modal -->
+  <div class="savecode-overlay" id="savecode-overlay" onclick="if(event.target===this)closeSaveCode()">
+    <div class="savecode-modal">
+      <div class="savecode-topbar">
+        <div class="savecode-title">Save / Load <em>Data</em></div>
+        <button class="savecode-btn" onclick="closeSaveCode()">✕ Close</button>
+      </div>
 
+      <!-- Export -->
+      <div>
+        <div class="savecode-section-label">Export</div>
+        <div class="savecode-row" style="margin-top:0">
+          <button class="savecode-btn primary" onclick="doCopy()">Copy Save Code</button>
+          <span class="savecode-status" id="savecode-copy-status"></span>
+        </div>
+        <div class="savecode-hint" style="margin-top:8px">
+          Copies all your progress to the clipboard — paste it on another device to transfer.
+        </div>
+      </div>
+
+      <hr class="savecode-divider">
+
+      <!-- Import -->
+      <div>
+        <div class="savecode-section-label">Import</div>
+        <div class="savecode-row" style="margin-top:0;align-items:center">
+          <button class="savecode-btn primary" onclick="doPaste()">Paste Save Code</button>
+          <span class="savecode-status" id="savecode-import-status"></span>
+        </div>
+        <div class="savecode-hint" style="margin-top:8px">
+          Reads a save code from your clipboard and applies it to this device.
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Heatmap overlay -->
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
@@ -1479,10 +1537,6 @@ kbd{
         <!-- Top-left: buttons -->
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <button class="glossary-close" onclick="closeHeatmap()">✕ Close</button>
-          <button class="glossary-close" id="heatmap-refresh-btn" onclick="manualSync(this)" title="Sync data" style="display:none">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Sync
-          </button>
         </div>
         <!-- Center: title absolutely positioned -->
         <div style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;">
@@ -1491,7 +1545,6 @@ kbd{
         </div>
         <!-- Right: invisible spacer to balance flex layout -->
         <div style="flex-shrink:0;visibility:hidden;display:flex;gap:8px;">
-          <button class="glossary-close">Sync</button>
           <button class="glossary-close">✕ Close</button>
         </div>
       </div>
@@ -1575,6 +1628,7 @@ kbd{
   </div>
 </div>
 <script>
+(function(){
 const LESSON_NAMES={1:'Language',2:'Possibility',3:'Change',4:'Mind & Knowledge',5:'Avoidance',6:'Sequence',7:'Criticism',8:'Responsibility',9:'Behavior',10:'Skill',11:'Commands',12:'Size',13:'Imitation',14:'Pairs',15:'Reversal'};
 
 // ─── Curated confusion groups ─────────────────────────────────────────────────
@@ -1755,6 +1809,66 @@ const ALL=[
 
 const LETTERS=['A','B','C','D'];
 let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
+let _currentCorrect = null; // set internally at render time — never trusted from pick() caller
+
+/* ── Spam protection ─────────────────────────────────────────────────────── */
+const SPAM_WINDOW_MS   = 10000; // rolling window to measure speed
+const SPAM_THRESHOLD   = 10;    // actions within that window = spam
+const SPAM_COOLDOWN_MS = 3000;  // how long the next-btn stays locked after warning
+const _spamTimes = [];
+let   _spamLocked = false;
+let   _spamToastTimer = null;
+
+function _getOrCreateToast(){
+  let t = document.getElementById('spam-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'spam-toast';
+    document.body.appendChild(t);
+  }
+  return t;
+}
+
+function _showSpamToast(msg){
+  const t = _getOrCreateToast();
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_spamToastTimer);
+  _spamToastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+function _lockNextBtn(ms){
+  const btn = document.getElementById('nxt');
+  if(!btn) return;
+  btn.disabled = true;
+  btn.style.opacity = '0.45';
+  btn.style.cursor  = 'not-allowed';
+  setTimeout(()=>{
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor  = '';
+  }, ms);
+}
+
+/** Call this on every answer pick or next-question action.
+ *  Returns true if the action is spam and should be suppressed. */
+function _spamCheck(){
+  if(_spamLocked) return true;
+  const now = Date.now();
+  _spamTimes.push(now);
+  // Keep only timestamps inside the rolling window
+  while(_spamTimes.length && now - _spamTimes[0] > SPAM_WINDOW_MS) _spamTimes.shift();
+  if(_spamTimes.length >= SPAM_THRESHOLD){
+    _spamTimes.length = 0; // reset counter
+    _spamLocked = true;
+    _showSpamToast('⚡ Slow down! Take a moment to read each question.');
+    _lockNextBtn(SPAM_COOLDOWN_MS);
+    setTimeout(()=>{ _spamLocked = false; }, SPAM_COOLDOWN_MS);
+    return true;
+  }
+  return false;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
 // Adaptive mode state
 let adaptiveCount=0, adaptiveScore=0, adaptiveStreak=0, adaptiveBestStreak=0;
 let adaptiveRecentWords=[], adaptiveNextReview=Math.floor(Math.random()*3)+4;
@@ -2070,12 +2184,12 @@ function render(){
   const dirLabel=showDef?'Which word fits this definition?':'Select the correct definition:';
   const prompt=showDef?`<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`:
     `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
+  _currentCorrect = showDef ? item.w : item.d;
   const optsHtml=shuffled.map((o,i)=>{
     const label=showDef?o.w:o.d;
     const safeLabel=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const safeKey=(showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const safeCorrect=(showDef?item.w:item.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}','${safeCorrect}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
+    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
   }).join('');
   app.innerHTML=`
     <div class="stats">
@@ -2148,8 +2262,12 @@ function showAnswer(){
   document.getElementById('nxt').style.display='block';
 }
 
-function pick(idx,chosen,correct){
+function pick(idx,chosen){
   if(answered)return;
+  if(_spamCheck())return;
+  // Always use the internally-set correct answer — never trust the caller
+  const correct = _currentCorrect;
+  if(!correct) return;
   answered=true;
   const isRight=chosen===correct;
   if(isRight){
@@ -2287,12 +2405,12 @@ function renderAdaptive(app){
   const prompt = showDef
     ? `<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`
     : `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
+  _currentCorrect = showDef ? item.w : item.d;
   const optsHtml = shuffled.map((o,i)=>{
     const label = showDef?o.w:o.d;
     const safeLabel = label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const safeKey = (showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const safeCorrect = (showDef?item.w:item.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}','${safeCorrect}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
+    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
   }).join('');
   const accuracy = adaptiveCount > 0 ? Math.round(adaptiveScore/adaptiveCount*100) : 0;
   const s = wordStats[item.w];
@@ -2324,6 +2442,7 @@ function renderAdaptive(app){
 }
 
 function nextQ(){
+  if(_spamLocked)return;
   answered=false;
   if(mode==='adaptive'){adaptiveCount++;render();return;}
   current++;render();
@@ -2606,7 +2725,7 @@ document.addEventListener('keydown', e => {
       return;
     }
     // Space or Enter to advance
-    if((key === ' ' || e.key === 'Enter') && answered) {
+    if((key === ' ' || e.key === 'Enter') && answered && !_spamLocked) {
       e.preventDefault();
       const nxt = document.getElementById('nxt');
       if(nxt && nxt.style.display !== 'none') nxt.click();
@@ -3481,6 +3600,262 @@ window.addEventListener("beforeunload", () => {
   endSession();
 });
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Save / Load Code ────────────────────────────────────────────────────────
+const SAVE_CODE_VERSION = 2;
+
+function openSaveCode() {
+  document.getElementById('savecode-overlay').classList.add('open');
+  document.getElementById('savecode-copy-status').className = 'savecode-status';
+  document.getElementById('savecode-import-status').className = 'savecode-status';
+}
+
+function closeSaveCode() {
+  document.getElementById('savecode-overlay').classList.remove('open');
+}
+
+function generateSaveCode() {
+  const payload = {
+    v: SAVE_CODE_VERSION,
+    // ── Persistent data ──────────────────────────────────────────────────────
+    ws: wordStats,
+    ad: activityDays,
+    hw: [...hiddenWords],
+    us: localUserSeconds,
+    sh: sessionHistory,
+    // ── Full UI + session snapshot ────────────────────────────────────────────
+    ss: {
+      // Appearance & layout
+      theme:             localStorage.getItem('vocab_theme') || 'dark',
+      settingsCollapsed: localStorage.getItem('vocab_settings_collapsed') === '1',
+      // Mode / direction / order / lesson
+      mode:              mode,
+      dir:               dir,
+      order:             quizOrder,
+      lesson:            selectedLesson,
+      // Quiz session — queue as word strings so it's compact
+      queue:             queue.map(item => item.w),
+      current:           current,
+      score:             score,
+      wrong:             wrong.map(item => item.w),
+      // Flash state
+      flashIdx:          flashIdx,
+      flashShuffled:     flashShuffled,
+      // Adaptive state
+      adaptiveCount:       adaptiveCount,
+      adaptiveScore:       adaptiveScore,
+      adaptiveStreak:      adaptiveStreak,
+      adaptiveBestStreak:  adaptiveBestStreak,
+      adaptiveRecentWords: adaptiveRecentWords,
+      adaptiveNextReview:  adaptiveNextReview
+    }
+  };
+  return LZString.compressToBase64(JSON.stringify(payload));
+}
+
+function applySaveCode(code) {
+  const json = LZString.decompressFromBase64(code.trim());
+  if (!json) throw new Error('Decompression failed.');
+  const data = JSON.parse(json);
+  if (!data || (data.v !== 1 && data.v !== SAVE_CODE_VERSION)) throw new Error('Unrecognized version.');
+
+  // ── Core persistent data ──────────────────────────────────────────────────
+  wordStats        = data.ws || {};
+  activityDays     = data.ad || [];
+  hiddenWords      = new Set(data.hw || []);
+  localUserSeconds = data.us || 0;
+  sessionHistory   = data.sh || [];
+  localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
+
+  // ── v1 legacy: preferences only, no session state ─────────────────────────
+  if (data.v === 1) {
+    if (data.pr) { try { applyPreferences(data.pr); } catch(e) {} }
+    return;
+  }
+
+  // ── v2: full snapshot restore ─────────────────────────────────────────────
+  const ss = data.ss || {};
+
+  // Theme
+  setTheme(ss.theme || 'dark');
+
+  // Settings panel collapse state
+  const panel = document.getElementById('settings-panel');
+  if (ss.settingsCollapsed) {
+    panel.classList.add('collapsed');
+    localStorage.setItem('vocab_settings_collapsed', '1');
+  } else {
+    panel.classList.remove('collapsed');
+    localStorage.setItem('vocab_settings_collapsed', '0');
+  }
+
+  // Direction buttons
+  dir = ss.dir || 'word';
+  ['word','def','random'].forEach(k => {
+    const el = document.getElementById('dir-' + k);
+    if (el) el.className = 'dir-btn' + (dir === k ? ' active' : '');
+  });
+
+  // Order buttons
+  quizOrder = ss.order || 'random';
+  const ordEl = document.getElementById('order-ordered');
+  const rndEl = document.getElementById('order-random');
+  if (ordEl) ordEl.className = 'dir-btn' + (quizOrder === 'ordered' ? ' active' : '');
+  if (rndEl) rndEl.className = 'dir-btn' + (quizOrder === 'random'  ? ' active' : '');
+
+  // Mode and lesson
+  mode           = ss.mode   || 'adaptive';
+  selectedLesson = ss.lesson !== undefined ? ss.lesson : 'all';
+
+  // Mode buttons + row visibility
+  const mq = document.getElementById('mode-quiz');
+  const mf = document.getElementById('mode-flash');
+  const dirRow    = document.getElementById('dir-row');
+  const orderRow  = document.getElementById('order-row');
+  const lessonRow = document.getElementById('lesson-row');
+  if (mode === 'flash') {
+    if (mq) mq.className = 'mode-btn';
+    if (mf) mf.className = 'mode-btn active';
+    if (dirRow)    dirRow.style.display    = 'none';
+    if (orderRow)  orderRow.style.display  = 'none';
+    if (lessonRow) lessonRow.style.display = 'none';
+  } else {
+    if (mq) mq.className = 'mode-btn active';
+    if (mf) mf.className = 'mode-btn';
+    if (dirRow)    dirRow.style.display    = (mode === 'quiz' || mode === 'adaptive') ? 'flex' : 'none';
+    if (orderRow)  orderRow.style.display  = mode === 'quiz' ? 'flex' : 'none';
+    if (lessonRow) lessonRow.style.display = 'flex';
+  }
+  buildLessonRow();
+
+  // Rebuild pool from restored lesson/mode
+  orderedPool  = getPool();
+  flashShuffled = ss.flashShuffled || false;
+  pool = flashShuffled ? shuffle([...orderedPool]) : [...orderedPool];
+
+  // Adaptive state
+  adaptiveCount       = ss.adaptiveCount       || 0;
+  adaptiveScore       = ss.adaptiveScore       || 0;
+  adaptiveStreak      = ss.adaptiveStreak      || 0;
+  adaptiveBestStreak  = ss.adaptiveBestStreak  || 0;
+  adaptiveRecentWords = ss.adaptiveRecentWords || [];
+  adaptiveNextReview  = ss.adaptiveNextReview  || Math.floor(Math.random()*3)+4;
+
+  // Quiz session state — restore queue from saved word strings
+  if (ss.queue && ss.queue.length > 0) {
+    queue   = ss.queue.map(w => ALL.find(item => item.w === w)).filter(Boolean);
+    current = Math.min(ss.current || 0, Math.max(0, queue.length - 1));
+    score   = ss.score || 0;
+    wrong   = (ss.wrong || []).map(w => ALL.find(item => item.w === w)).filter(Boolean);
+  } else {
+    queue   = quizOrder === 'ordered' ? [...orderedPool] : shuffle([...orderedPool]);
+    current = 0; score = 0; wrong = [];
+  }
+  answered  = false; // always land on question unanswered — clean state
+
+  // Flash position
+  flashIdx   = Math.min(ss.flashIdx || 0, Math.max(0, pool.length - 1));
+  flashState = 0; // always show front of card on load
+
+  render();
+  pushImportToFirestore();
+}
+
+// Immediately writes all imported data to Firestore so the new device is in
+// sync right away, rather than waiting for the next 60-second flush cycle.
+async function pushImportToFirestore() {
+  if (!fbUser) return;
+  try {
+    const FV = firebase.firestore.FieldValue;
+    const userRef    = db.collection("userData").doc(fbUser.uid);
+    const summaryRef = db.collection("users").doc(fbUser.uid);
+    const fmt = fmtHMS(localUserSeconds);
+
+    // Build per-word stat map
+    const wordUpdates = {};
+    for (const [word, stat] of Object.entries(wordStats)) {
+      wordUpdates[`wordStats.${word}`] = stat;
+    }
+
+    await Promise.all([
+      userRef.set({
+        ...wordUpdates,
+        userSeconds:  localUserSeconds,
+        totalTime:    fmt,
+        activityDays: activityDays.length ? FV.arrayUnion(...activityDays) : [],
+        hiddenWords:  [...hiddenWords],
+        lastSeen:     FV.serverTimestamp(),
+      }, { merge: true }),
+      summaryRef.set({
+        userSeconds: localUserSeconds,
+        totalTime:   fmt,
+      }, { merge: true }),
+    ]);
+
+    // Sync the flush baseline so flushTime() doesn't double-count imported seconds
+    lastFlushUserSeconds = localUserSeconds;
+  } catch (err) {
+    console.warn("pushImportToFirestore error:", err);
+  }
+}
+
+// Generates the code and writes it straight to the clipboard.
+function doCopy() {
+  const status = document.getElementById('savecode-copy-status');
+  try {
+    const code = generateSaveCode();
+    navigator.clipboard.writeText(code).then(() => {
+      status.textContent = '✓ Copied!';
+      status.className = 'savecode-status ok';
+      setTimeout(() => { status.className = 'savecode-status'; }, 2500);
+    }).catch(() => {
+      status.textContent = 'Clipboard blocked — try a different browser';
+      status.className = 'savecode-status err';
+    });
+  } catch(e) {
+    status.textContent = 'Failed to generate code';
+    status.className = 'savecode-status err';
+  }
+}
+
+// Reads directly from clipboard and applies the code.
+function doPaste() {
+  const status = document.getElementById('savecode-import-status');
+  navigator.clipboard.readText().then(code => {
+    if (!code || !code.trim()) {
+      status.textContent = 'Clipboard is empty';
+      status.className = 'savecode-status err';
+      return;
+    }
+    try {
+      applySaveCode(code);
+      status.textContent = '✓ Data loaded!';
+      status.className = 'savecode-status ok';
+      setTimeout(closeSaveCode, 1200);
+    } catch(e) {
+      status.textContent = 'Invalid code — was it copied in full?';
+      status.className = 'savecode-status err';
+    }
+  }).catch(() => {
+    status.textContent = 'Clipboard access denied — check browser permissions';
+    status.className = 'savecode-status err';
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// ── Expose only UI-triggered functions to window (onclick attributes need these)
+// pick, nextQ, ALL, and internal state are intentionally NOT exposed.
+const _uiFns = {
+  setMode, setOrder, setDir, setTheme, startSession, openGlossary, closeGlossary,
+  openHeatmap, closeHeatmap, openSaveCode, closeSaveCode, doCopy, doPaste,
+  toggleSettings, selectLesson, drillSelected, hideSelected, restoreSelected,
+  clearSelection, saveHidden, toggleWordSelect, retakeWrong,
+  showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle
+};
+Object.assign(window, _uiFns);
+// pick and nextQ exposed minimally — but correct answer is internal-only
+window.pick   = pick;
+window.nextQ  = nextQ;
+})();
 </script>
 </body>
 </html>
