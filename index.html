@@ -3006,22 +3006,24 @@ function isGoogleUser(user) {
 }
 
 function updateAuthUI(user) {
-  const signinBtn = document.getElementById('google-signin-btn');
-  const badge = document.getElementById('user-badge');
-
-  const syncBtn = document.getElementById('badge-refresh-btn');
-  const hmSyncBtn = document.getElementById('heatmap-refresh-btn');
+  const signinBtn  = document.getElementById('google-signin-btn');
+  const badge      = document.getElementById('user-badge');
+  const signinWrap = document.getElementById('signin-wrap');
+  const signinHint = document.getElementById('signin-hint');
+  const syncBtn    = document.getElementById('badge-refresh-btn');
+  const hmSyncBtn  = document.getElementById('heatmap-refresh-btn');
+  if (!signinBtn || !badge || !signinWrap) return;
   if (!isGoogleUser(user)) {
-    if (badge) badge.style.display = 'none';
+    badge.style.display = 'none';
     if (syncBtn) syncBtn.style.display = 'none';
     if (hmSyncBtn) hmSyncBtn.style.display = 'none';
-    document.getElementById('signin-wrap').style.display = 'flex';
+    signinWrap.style.display = 'flex';
     signinBtn.style.display = '';
     signinBtn.disabled = false;
     signinBtn.innerHTML = GOOGLE_SVG + 'Sign in with Google';
-    document.getElementById('signin-hint').style.display = 'flex';
+    if (signinHint) signinHint.style.display = 'flex';
   } else {
-    document.getElementById('signin-wrap').style.display = 'none';
+    signinWrap.style.display = 'none';
     signinBtn.style.display = 'none';
     badge.style.display = 'flex';
     if (syncBtn) syncBtn.style.display = '';
@@ -3034,13 +3036,12 @@ function updateAuthUI(user) {
       || (googleData && googleData.photoURL)
       || user.photoURL;
     const firstName = (displayName || user.email || 'Signed in').split(' ')[0];
-    document.getElementById('user-display-name').textContent = firstName;
+    const nameEl = document.getElementById('user-display-name');
+    if (nameEl) nameEl.textContent = firstName;
     const avatar = document.getElementById('user-avatar');
-    if (photoURL) {
-      avatar.src = photoURL;
-      avatar.style.display = '';
-    } else {
-      avatar.style.display = 'none';
+    if (avatar) {
+      if (photoURL) { avatar.src = photoURL; avatar.style.display = ''; }
+      else { avatar.style.display = 'none'; }
     }
   }
 }
