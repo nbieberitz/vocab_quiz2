@@ -2835,17 +2835,39 @@ const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // ── Cloud Function callables — all Firestore writes go through here ───────────
-const functions        = firebase.functions();
-const _cfInitUserDoc     = functions.httpsCallable('initUserDoc');
-const _cfFlushUserData   = functions.httpsCallable('flushUserData');
-const _cfSyncGlobalStats = functions.httpsCallable('syncGlobalStats');
-const _cfEndSession      = functions.httpsCallable('endSession');
-const _cfSavePreferences = functions.httpsCallable('savePreferences');
-const _cfSaveHidden      = functions.httpsCallable('saveHidden');
-const _cfPushImport      = functions.httpsCallable('pushImportToFirestore');
-const _cfWriteEmail      = functions.httpsCallable('writeEmail');
-const _cfDeleteAnonDocs  = functions.httpsCallable('deleteAnonDocs');
-const _cfMergeAnonData   = functions.httpsCallable('mergeAnonData');
+async function _callCF(name, data) {
+  const user  = auth.currentUser;
+  const token = user ? await user.getIdToken() : null;
+  const res   = await fetch(
+    `https://us-central1-vocab-tool-testing.cloudfunctions.net/${name}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ data })
+    }
+  );
+  const json = await res.json();
+  if (json.error) {
+    const err = new Error(json.error.message || 'Cloud Function error');
+    err.code = json.error.status || 'internal';
+    throw err;
+  }
+  return { data: json.result };
+}
+
+const _cfInitUserDoc     = d => _callCF('initUserDoc', d);
+const _cfFlushUserData   = d => _callCF('flushUserData', d);
+const _cfSyncGlobalStats = d => _callCF('syncGlobalStats', d);
+const _cfEndSession      = d => _callCF('endSession', d);
+const _cfSavePreferences = d => _callCF('savePreferences', d);
+const _cfSaveHidden      = d => _callCF('saveHidden', d);
+const _cfPushImport      = d => _callCF('pushImportToFirestore', d);
+const _cfWriteEmail      = d => _callCF('writeEmail', d);
+const _cfDeleteAnonDocs  = d => _callCF('deleteAnonDocs', d);
+const _cfMergeAnonData   = d => _callCF('mergeAnonData', d);
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
@@ -2990,7 +3012,7 @@ function updateAuthUI(user) {
   const syncBtn = document.getElementById('badge-refresh-btn');
   const hmSyncBtn = document.getElementById('heatmap-refresh-btn');
   if (!isGoogleUser(user)) {
-    badge.style.display = 'none';
+    if (badge) badge.style.display = 'none';
     if (syncBtn) syncBtn.style.display = 'none';
     if (hmSyncBtn) hmSyncBtn.style.display = 'none';
     document.getElementById('signin-wrap').style.display = 'flex';
