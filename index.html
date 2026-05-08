@@ -3334,13 +3334,16 @@ function flushTime() {
   }
 
   return _cfFlushUserData({
-    elapsed,
-    localUserSeconds,
-    totalTime:      fmt,
     wordStats,
     activityDays,
     answersToFlush,
     correctToFlush
+  }).then(res => {
+    // Sync authoritative userSeconds back from server
+    if (res && res.data && typeof res.data.userSeconds === 'number') {
+      localUserSeconds     = res.data.userSeconds;
+      lastFlushUserSeconds = localUserSeconds;
+    }
   }).catch(err => console.warn("flushUserData CF error:", err));
 }
 
