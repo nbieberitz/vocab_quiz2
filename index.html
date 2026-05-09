@@ -1332,6 +1332,25 @@ kbd{
   white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.25);
 }
 #spam-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Loading spinner ── */
+.ld-wrap{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;min-height:180px;
+}
+.ld-spinner{
+  width:28px;height:28px;
+  border:2.5px solid var(--border2);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:ld-spin .7s linear infinite;
+}
+.ld-label{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--muted);opacity:0.7;
+}
+@keyframes ld-spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -2045,18 +2064,14 @@ async function loadNextQuestion(){
   // Auth not ready yet — show a waiting state. The auth listener will call render() once ready.
   if(!auth.currentUser){
     const app=document.getElementById('app');
-    if(app) app.innerHTML=`<div class="qcard" style="min-height:180px;display:flex;align-items:center;justify-content:center;opacity:0.35">
-      <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)">Connecting…</div>
-    </div>`;
+    if(app) app.innerHTML=`<div class="qcard"><div class="ld-wrap"><div class="ld-spinner"></div><div class="ld-label">Connecting…</div></div></div>`;
     return;
   }
   if(_isLoadingQuestion) return;
   _isLoadingQuestion=true;
   answered=false;
   const app=document.getElementById('app');
-  app.innerHTML=`<div class="qcard" style="min-height:180px;display:flex;align-items:center;justify-content:center;opacity:0.45">
-    <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)">Loading question…</div>
-  </div>`;
+  app.innerHTML=`<div class="qcard"><div class="ld-wrap"><div class="ld-spinner"></div><div class="ld-label">Loading question…</div></div></div>`;
   try{
     const payload={
       mode,
@@ -2193,6 +2208,22 @@ async function pick(idx,chosen){
       }
     }
 
+    // Fire prefetch immediately — in parallel with submitAnswer.
+    // We know the current word already, so we pre-include it in askedWords/recentWords
+    // so the next question won't repeat it.
+    if(mode!=='flash'){
+      const prefetchPayload={
+        mode,
+        lesson:selectedLesson,
+        dir,
+        hiddenWords:[...hiddenWords],
+        askedWords: mode==='quiz' ? [..._askedWords, q.word] : [],
+        recentWords:mode==='adaptive' ? [...adaptiveRecentWords] : []
+      };
+      if(_drillWords) prefetchPayload.drillWords=[..._drillWords];
+      _prefetchPromise=_cfGetQuestion(prefetchPayload).catch(()=>null);
+    }
+
     const res=await _cfSubmitAnswer({
       questionId:_currentQuestionId,
       chosen:idx<0?'__SKIP__':chosen,
@@ -2225,9 +2256,6 @@ async function pick(idx,chosen){
     }
     if(mode==='quiz') _askedWords.push(result.word);
     if(mode==='adaptive') adaptiveCount++;
-
-    // Prefetch next question while user reads feedback — will be ready by the time they click Next
-    _firePrefetch();
 
     // Apply visual result to option buttons
     const els=document.getElementById('opts')?.children||[];
