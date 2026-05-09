@@ -2023,6 +2023,14 @@ function render(){
 
 // ── Server-side question loading ──────────────────────────────────────────────
 async function loadNextQuestion(){
+  // Auth not ready yet — show a waiting state. The auth listener will call render() once ready.
+  if(!auth.currentUser){
+    const app=document.getElementById('app');
+    if(app) app.innerHTML=`<div class="qcard" style="min-height:180px;display:flex;align-items:center;justify-content:center;opacity:0.35">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)">Connecting…</div>
+    </div>`;
+    return;
+  }
   if(_isLoadingQuestion) return;
   _isLoadingQuestion=true;
   answered=false;
@@ -2776,6 +2784,8 @@ auth.onAuthStateChanged(async user => {
   }
   startSecondTimer();
   updateAuthUI(user);
+  // Auth is now ready — load the first question if the app is sitting on a waiting/connecting state
+  if(mode !== 'flash') render();
 });
 
 async function initUserDoc(user) {
