@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
 :root{
   --bg:#05080f;
@@ -1352,7 +1353,126 @@ kbd{
 }
 @keyframes ld-spin{to{transform:rotate(360deg);}}
 
-/* ── Full-screen startup loading screen ── */
+/* ── Quiz list screen ── */
+.screen{display:none;min-height:100vh;padding:2.5rem 1.5rem;}
+.screen.active{display:block;}
+.list-wrap{max-width:680px;margin:0 auto;}
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.list-title{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:0.05em;color:var(--text);}
+.list-title em{color:var(--accent);font-style:normal;}
+.quiz-card{
+  background:var(--surface);border:1px solid var(--border2);border-radius:14px;
+  padding:1.4rem 1.6rem;margin-bottom:1rem;cursor:pointer;
+  transition:border-color .18s,transform .18s,box-shadow .18s;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+}
+.quiz-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,212,255,0.08);}
+.quiz-card-info{flex:1;}
+.quiz-card-title{font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:500;color:var(--text);margin-bottom:0.3rem;}
+.quiz-card-meta{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.quiz-card-arrow{font-size:1.2rem;color:var(--accent);opacity:0.6;}
+.submissions-section{margin-top:2.5rem;}
+.submissions-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
+.submission-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:1rem 1.2rem;margin-bottom:0.75rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+}
+.submission-info{flex:1;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+.submission-notes{color:var(--text);font-size:12px;margin-bottom:0.3rem;font-family:'DM Sans',sans-serif;}
+.status-badge{
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;
+  text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;
+}
+.status-badge.pending{background:rgba(245,166,35,0.12);color:var(--accent2);}
+.status-badge.published{background:rgba(0,229,160,0.12);color:var(--correct);}
+
+/* ── Submit form screen ── */
+.form-wrap{max-width:580px;margin:0 auto;}
+.form-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.05em;color:var(--text);margin-bottom:0.3rem;}
+.form-subtitle{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2rem;}
+.form-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;display:block;}
+.upload-zone{
+  border:2px dashed var(--border2);border-radius:12px;padding:2rem;text-align:center;
+  cursor:pointer;transition:border-color .18s,background .18s;margin-bottom:1.5rem;
+  position:relative;
+}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(0,212,255,0.03);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+.upload-previews{display:flex;flex-wrap:wrap;gap:8px;margin-top:1rem;}
+.upload-thumb{
+  width:72px;height:72px;border-radius:8px;object-fit:cover;
+  border:1px solid var(--border2);position:relative;display:inline-block;
+}
+.upload-thumb-wrap{position:relative;display:inline-block;}
+.upload-thumb-remove{
+  position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+  background:var(--wrong);border:none;cursor:pointer;font-size:10px;color:#fff;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.form-textarea{
+  width:100%;min-height:120px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;padding:0.85rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:14px;resize:vertical;box-sizing:border-box;outline:none;
+  transition:border-color .18s;margin-bottom:1.5rem;
+}
+.form-textarea:focus{border-color:var(--accent);}
+.form-checkbox-row{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.75rem;cursor:pointer;}
+.form-checkbox-row input[type=checkbox]{margin-top:2px;accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+.form-checkbox-label{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);line-height:1.5;}
+.form-actions{display:flex;gap:0.75rem;}
+.form-submit-btn{
+  flex:1;padding:0.75rem 1.5rem;background:var(--accent);color:#000;
+  font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
+  border:none;border-radius:8px;cursor:pointer;font-weight:500;
+  transition:opacity .18s;
+}
+.form-submit-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.form-cancel-btn{
+  padding:0.75rem 1.25rem;background:transparent;color:var(--muted);
+  font-family:'DM Mono',monospace;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
+  border:1px solid var(--border2);border-radius:8px;cursor:pointer;
+  transition:border-color .18s,color .18s;
+}
+.form-cancel-btn:hover{border-color:var(--accent);color:var(--text);}
+
+/* ── Back button ── */
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);background:transparent;border:none;cursor:pointer;
+  padding:0;transition:color .18s;margin-bottom:1.5rem;
+}
+.back-btn:hover{color:var(--accent);}
+
+/* ── Mid-quiz leave warning modal ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border2);border-radius:16px;
+  padding:2rem;max-width:360px;width:100%;
+}
+.modal-title{font-family:'DM Sans',sans-serif;font-weight:500;font-size:1rem;color:var(--text);margin-bottom:0.6rem;}
+.modal-body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1.5rem;}
+.modal-actions{display:flex;gap:0.75rem;}
+.modal-stay{
+  flex:1;padding:0.65rem;background:var(--accent);color:#000;
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  border:none;border-radius:8px;cursor:pointer;font-weight:500;
+}
+.modal-leave{
+  flex:1;padding:0.65rem;background:transparent;color:var(--muted);
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  border:1px solid var(--border2);border-radius:8px;cursor:pointer;
+  transition:border-color .18s,color .18s;
+}
+.modal-leave:hover{border-color:var(--wrong);color:var(--wrong);}
+</style>
 #loading-screen{
   position:fixed;inset:0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1376,10 +1496,71 @@ kbd{
   <div class="ld-spinner"></div>
   <div class="ld-label">Preparing quiz…</div>
 </div>
+
+<!-- ── Leave-quiz warning modal ── -->
+<div class="modal-overlay" id="leave-modal">
+  <div class="modal-box">
+    <div class="modal-title">Leave this quiz?</div>
+    <div class="modal-body">You're mid-quiz — your session progress won't be saved. Leave anyway?</div>
+    <div class="modal-actions">
+      <button class="modal-stay"  onclick="closeLeaveModal()">Stay</button>
+      <button class="modal-leave" onclick="confirmLeave()">Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Quiz list screen ── -->
+<div id="screen-list" class="screen">
+  <div class="list-wrap">
+    <div class="list-header">
+      <div class="list-title">VOCAB <em>QUIZZES</em></div>
+      <button class="rbtn" onclick="navigate('submit')">+ Submit New Quiz</button>
+    </div>
+    <div id="quiz-cards">
+      <div class="ld-wrap" style="min-height:120px"><div class="ld-spinner"></div></div>
+    </div>
+    <div id="my-submissions-section" class="submissions-section" style="display:none">
+      <div class="submissions-title">My Submissions</div>
+      <div id="my-submissions-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Submit form screen ── -->
+<div id="screen-submit" class="screen">
+  <div class="form-wrap">
+    <button class="back-btn" onclick="navigate('')">← Back to quizzes</button>
+    <div class="form-title">SUBMIT A QUIZ</div>
+    <div class="form-subtitle">Upload textbook photos · Add notes · We'll do the rest</div>
+
+    <label class="form-label">Images (up to 10)</label>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="image-input" accept="image/*" multiple>
+      <div class="upload-zone-label" id="upload-zone-label">Click or drag images here</div>
+      <div class="upload-previews" id="upload-previews"></div>
+    </div>
+
+    <label class="form-label" for="submission-notes">Notes</label>
+    <textarea class="form-textarea" id="submission-notes" placeholder="Describe what these words are for — class, chapter, topic, anything helpful…"></textarea>
+
+    <label class="form-checkbox-row">
+      <input type="checkbox" id="tag-name-checkbox">
+      <span class="form-checkbox-label">Tag my name on this public submission</span>
+    </label>
+
+    <div class="form-actions">
+      <button class="form-cancel-btn" onclick="navigate('')">Cancel</button>
+      <button class="form-submit-btn" id="submit-btn" onclick="submitQuizForm()">Submit</button>
+    </div>
+    <div id="submit-status" style="margin-top:1rem;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);"></div>
+  </div>
+</div>
+
 <div class="orb-bottom"></div>
 <div class="wrap">
   <div class="header">
     <div class="logo-wrap">
+      <button class="back-btn" onclick="navigate('')">← All Quizzes</button>
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
@@ -2671,9 +2852,10 @@ const firebaseConfig = {
   appId: "1:604425746281:web:6fa5ff08327002bbfaeff8"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+const auth            = firebase.auth();
+const db              = firebase.firestore();
+const storageRef      = firebase.storage();
+const googleProvider  = new firebase.auth.GoogleAuthProvider();
 
 selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
@@ -2826,6 +3008,9 @@ const _cfSaveHidden      = d => _callCF('saveHidden', d);
 const _cfWriteEmail      = d => _callCF('writeEmail', d);
 const _cfDeleteAnonDocs  = d => _callCF('deleteAnonDocs', d);
 const _cfMergeAnonData   = d => _callCF('mergeAnonData', d);
+const _cfGetQuizList     = d => _callCF('getQuizList', d);
+const _cfSubmitQuiz      = d => _callCF('submitQuiz', d);
+const _cfGetMySubmissions= d => _callCF('getMySubmissions', d);
 // ── Server-side quiz grading — correct answer never touches the browser ───────
 const _cfGetQuestion     = d => _callCF('getQuestion', d);
 const _cfSubmitAnswer    = d => _callCF('submitAnswer', d);
@@ -2907,7 +3092,18 @@ auth.onAuthStateChanged(async user => {
   startSecondTimer();
   updateAuthUI(user);
   hideLoadingScreen();
-  if (mode !== 'flash') render();
+
+  // Route to correct screen based on hash
+  const hash = window.location.hash.replace('#', '');
+  if (hash.startsWith('quiz-')) {
+    showScreen('quiz');
+    if (mode !== 'flash') render();
+  } else if (hash === 'submit') {
+    showScreen('submit');
+  } else {
+    showScreen('list');
+    loadQuizList();
+  }
 });
 
 async function initUserDoc(user) {
@@ -3410,13 +3606,239 @@ window.addEventListener("beforeunload", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Hash routing ─────────────────────────────────────────────────────────────
+
+let _currentScreen = ''; // 'list' | 'quiz' | 'submit'
+let _pendingLeaveHash = null; // where we're trying to go when the warning shows
+
+function navigate(hash) {
+  window.location.hash = hash ? '#' + hash : '#';
+}
+
+function showScreen(name) {
+  document.getElementById('screen-list').classList.toggle('active', name === 'list');
+  document.getElementById('screen-submit').classList.toggle('active', name === 'submit');
+  document.querySelector('.wrap').style.display = name === 'quiz' ? '' : 'none';
+  _currentScreen = name;
+}
+
+function handleRoute() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash.startsWith('quiz-')) {
+    const quizId = hash.slice(5);
+    showScreen('quiz');
+    // Reset and start the quiz if switching from list
+    if (_currentScreen !== 'quiz') startSession();
+  } else if (hash === 'submit') {
+    showScreen('submit');
+  } else {
+    showScreen('list');
+    loadQuizList();
+  }
+}
+
+window.addEventListener('hashchange', () => {
+  // Intercept navigation away from an active quiz
+  const hash = window.location.hash.replace('#', '');
+  if (_currentScreen === 'quiz' && adaptiveCount + score > 0 && !hash.startsWith('quiz-')) {
+    // User tried to navigate away mid-quiz — restore hash and show warning
+    _pendingLeaveHash = hash;
+    window.location.hash = 'quiz-' + (window.location.hash.includes('quiz-') ? window.location.hash.replace('#quiz-','') : 'vocab-150');
+    openLeaveModal();
+    return;
+  }
+  handleRoute();
+});
+
+function openLeaveModal() {
+  document.getElementById('leave-modal').classList.add('open');
+}
+function closeLeaveModal() {
+  document.getElementById('leave-modal').classList.remove('open');
+  _pendingLeaveHash = null;
+}
+function confirmLeave() {
+  document.getElementById('leave-modal').classList.remove('open');
+  const dest = _pendingLeaveHash || '';
+  _pendingLeaveHash = null;
+  navigate(dest);
+  handleRoute();
+}
+
+// ── Quiz list screen ──────────────────────────────────────────────────────────
+
+async function loadQuizList() {
+  const container = document.getElementById('quiz-cards');
+  try {
+    const res    = await _cfGetQuizList({});
+    const quizzes = res.data.quizzes || [];
+    if (quizzes.length === 0) {
+      container.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:2rem 0">No quizzes yet</div>`;
+      return;
+    }
+    container.innerHTML = quizzes.map(q => `
+      <div class="quiz-card" onclick="navigate('quiz-${q.id}')">
+        <div class="quiz-card-info">
+          <div class="quiz-card-title">${q.title}</div>
+          <div class="quiz-card-meta">${q.wordCount} words${q.submittedBy ? ` · Submitted by ${q.submittedBy}` : ''}</div>
+        </div>
+        <div class="quiz-card-arrow">›</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div style="color:var(--wrong);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase">Could not load quizzes — check your connection.</div>`;
+  }
+  // Load user's submissions
+  loadMySubmissions();
+}
+
+async function loadMySubmissions() {
+  if (!auth.currentUser) return;
+  try {
+    const res = await _cfGetMySubmissions({});
+    const submissions = res.data.submissions || [];
+    if (submissions.length === 0) return;
+    const section = document.getElementById('my-submissions-section');
+    const list    = document.getElementById('my-submissions-list');
+    section.style.display = '';
+    list.innerHTML = submissions.map(s => {
+      const date = s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : '';
+      const notesPreview = s.notes ? s.notes.slice(0, 60) + (s.notes.length > 60 ? '…' : '') : '(no notes)';
+      return `
+        <div class="submission-card">
+          <div class="submission-info">
+            <div class="submission-notes">${notesPreview}</div>
+            <div>${s.imageCount} image${s.imageCount !== 1 ? 's' : ''} · ${date}</div>
+          </div>
+          <span class="status-badge ${s.status}">${s.status}</span>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.warn("Could not load submissions:", err);
+  }
+}
+
+// ── Submit form ───────────────────────────────────────────────────────────────
+
+let _selectedFiles = [];
+
+(function initUploadZone() {
+  const zone  = document.getElementById('upload-zone');
+  const input = document.getElementById('image-input');
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', ()=> zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    addFiles(Array.from(e.dataTransfer.files));
+  });
+  input.addEventListener('change', () => {
+    addFiles(Array.from(input.files));
+    input.value = '';
+  });
+})();
+
+function addFiles(files) {
+  const remaining = 10 - _selectedFiles.length;
+  const toAdd = files.filter(f => f.type.startsWith('image/')).slice(0, remaining);
+  _selectedFiles = [..._selectedFiles, ...toAdd];
+  renderPreviews();
+}
+
+function removeFile(idx) {
+  _selectedFiles.splice(idx, 1);
+  renderPreviews();
+}
+
+function renderPreviews() {
+  const container = document.getElementById('upload-previews');
+  const label     = document.getElementById('upload-zone-label');
+  label.textContent = _selectedFiles.length === 0
+    ? 'Click or drag images here'
+    : `${_selectedFiles.length}/10 image${_selectedFiles.length !== 1 ? 's' : ''} selected`;
+  container.innerHTML = '';
+  _selectedFiles.forEach((file, i) => {
+    const url  = URL.createObjectURL(file);
+    const wrap = document.createElement('div');
+    wrap.className = 'upload-thumb-wrap';
+    wrap.innerHTML = `
+      <img class="upload-thumb" src="${url}">
+      <button class="upload-thumb-remove" onclick="removeFile(${i})">×</button>
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+async function submitQuizForm() {
+  const notes       = document.getElementById('submission-notes').value.trim();
+  const tagName     = document.getElementById('tag-name-checkbox').checked;
+  const btn         = document.getElementById('submit-btn');
+  const statusEl    = document.getElementById('submit-status');
+  const displayName = tagName && fbUser
+    ? (fbUser.displayName || fbUser.email || null)
+    : null;
+
+  if (_selectedFiles.length === 0 && !notes) {
+    statusEl.style.color = 'var(--wrong)';
+    statusEl.textContent = 'Please add at least one image or some notes.';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = 'Uploading images…';
+
+  try {
+    // Upload images to Firebase Storage
+    const uid       = fbUser.uid;
+    const timestamp = Date.now();
+    const imagePaths = await Promise.all(
+      _selectedFiles.map(async (file, i) => {
+        const path = `submissions/${uid}/${timestamp}/${i}_${file.name}`;
+        const ref  = storageRef.ref(path);
+        await ref.put(file);
+        return path;
+      })
+    );
+
+    statusEl.textContent = 'Submitting…';
+    await _cfSubmitQuiz({ notes, imagePaths, displayName });
+
+    // Clear form
+    _selectedFiles = [];
+    renderPreviews();
+    document.getElementById('submission-notes').value = '';
+    document.getElementById('tag-name-checkbox').checked = false;
+
+    statusEl.style.color = 'var(--correct)';
+    statusEl.textContent = 'Submitted! We\'ll review it soon.';
+    setTimeout(() => navigate(''), 2000);
+  } catch (err) {
+    console.error("Submission error:", err);
+    statusEl.style.color = 'var(--wrong)';
+    statusEl.textContent = 'Something went wrong — please try again.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Initial route ─────────────────────────────────────────────────────────────
+// Show list screen by default on page load; quiz opens when hash is set
+if (!window.location.hash || window.location.hash === '#') {
+  navigate('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ── Expose only UI-triggered functions to window (onclick attributes need these)
 const _uiFns = {
   setMode, setOrder, setDir, setTheme, startSession, openGlossary, closeGlossary,
   openHeatmap, closeHeatmap, toggleSettings, selectLesson, drillSelected,
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
-  manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay
+  manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay,
+  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm
 };
 Object.assign(window, _uiFns);
 window.pick  = pick;
