@@ -2130,12 +2130,10 @@ function renderQuestionFromServer(app,q){
       <div class="kbd-hint"><span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span><span><kbd>Space</kbd> to advance</span></div>`;
   }
 }
-}
 
-async function showAnswer(){
+function showAnswer(){
   if(answered) return;
-  // Treat as a skipped answer — server marks wrong, returns correct answer for display
-  await pick(-1,'__SKIP__');
+  pick(-1,'__SKIP__');
 }
 
 async function pick(idx,chosen){
