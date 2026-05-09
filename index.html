@@ -6,7 +6,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <title>Vocab Quiz</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1323,110 +1322,6 @@ kbd{
 }
 
 /* ── Save / Load Code Modal ──────────────────────────────────────────────── */
-.savecode-overlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(5,8,15,0.82);
-  z-index:200;
-  align-items:center;justify-content:center;
-  backdrop-filter:blur(6px);
-  animation:fadeUp .2s ease both;
-}
-.savecode-overlay.open{display:flex;}
-.savecode-modal{
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:20px;
-  padding:2rem;
-  width:min(520px,92vw);
-  box-shadow:0 8px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(0,200,255,0.06);
-  display:flex;flex-direction:column;gap:1.4rem;
-}
-.savecode-topbar{
-  display:flex;align-items:center;justify-content:space-between;
-}
-.savecode-title{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:1.8rem;letter-spacing:0.06em;
-  color:var(--text);
-}
-.savecode-title em{font-style:normal;color:var(--accent);}
-.savecode-section-label{
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.14em;
-  text-transform:uppercase;
-  color:var(--muted);
-  margin-bottom:7px;
-}
-.savecode-textarea{
-  width:100%;height:90px;
-  background:var(--bg);
-  border:1px solid var(--border2);
-  border-radius:10px;
-  color:var(--text);
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.02em;
-  line-height:1.6;
-  padding:10px 12px;
-  resize:none;
-  outline:none;
-  transition:border-color .15s;
-  word-break:break-all;
-}
-.savecode-textarea:focus{border-color:var(--accent);}
-.savecode-textarea.import-area{height:75px;}
-.savecode-row{display:flex;gap:8px;margin-top:8px;}
-.savecode-btn{
-  padding:8px 18px;
-  border-radius:30px;
-  border:1px solid var(--border2);
-  background:transparent;
-  font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:0.07em;
-  text-transform:uppercase;
-  cursor:pointer;transition:all .15s;
-  color:var(--text);
-  white-space:nowrap;
-}
-.savecode-btn:hover{border-color:var(--accent);color:var(--accent);}
-.savecode-btn.primary{
-  background:linear-gradient(135deg,var(--accent),rgba(0,180,220,0.85));
-  border-color:transparent;color:#050810;
-  box-shadow:0 0 14px rgba(0,212,255,0.3);
-}
-.savecode-btn.primary:hover{filter:brightness(1.08);box-shadow:0 0 20px rgba(0,212,255,0.45);}
-.savecode-btn.danger{border-color:rgba(255,92,122,0.4);color:var(--wrong);}
-.savecode-btn.danger:hover{background:var(--wrong-bg);}
-.savecode-divider{
-  border:none;border-top:1px solid var(--border);
-  margin:0;
-}
-.savecode-status{
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.07em;
-  text-transform:uppercase;
-  padding:6px 12px;
-  border-radius:20px;
-  display:none;
-}
-.savecode-status.ok{
-  display:inline-block;
-  background:var(--correct-bg);
-  border:1px solid var(--correct-border);
-  color:var(--correct);
-}
-.savecode-status.err{
-  display:inline-block;
-  background:var(--wrong-bg);
-  border:1px solid var(--wrong-border);
-  color:var(--wrong);
-}
-.savecode-hint{
-  font-family:'DM Mono',monospace;
-  font-size:10px;letter-spacing:0.05em;
-  color:var(--muted);
-  line-height:1.7;
-  margin-top:2px;
-}
 /* ── Spam protection toast ── */
 #spam-toast{
   position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -1481,54 +1376,9 @@ kbd{
           <span id="theme-icon">🌙</span>
         </div>
       </div>
-      <div style="display:flex;justify-content:flex-end">
-        <button class="glossary-btn" onclick="openSaveCode()" title="Export / import your progress">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 10v1.5A0.5,0.5 0 0 0 2.5 12h9a0.5,0.5 0 0 0 0.5-0.5V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          </svg>
-          Save/Load Data
-        </button>
-      </div>
-
     </div>
   </div>
 
-  <!-- Save / Load Code modal -->
-  <div class="savecode-overlay" id="savecode-overlay" onclick="if(event.target===this)closeSaveCode()">
-    <div class="savecode-modal">
-      <div class="savecode-topbar">
-        <div class="savecode-title">Save / Load <em>Data</em></div>
-        <button class="savecode-btn" onclick="closeSaveCode()">✕ Close</button>
-      </div>
-
-      <!-- Export -->
-      <div>
-        <div class="savecode-section-label">Export</div>
-        <div class="savecode-row" style="margin-top:0">
-          <button class="savecode-btn primary" onclick="doCopy()">Copy Save Code</button>
-          <span class="savecode-status" id="savecode-copy-status"></span>
-        </div>
-        <div class="savecode-hint" style="margin-top:8px">
-          Copies all your progress to the clipboard — paste it on another device to transfer.
-        </div>
-      </div>
-
-      <hr class="savecode-divider">
-
-      <!-- Import -->
-      <div>
-        <div class="savecode-section-label">Import</div>
-        <div class="savecode-row" style="margin-top:0;align-items:center">
-          <button class="savecode-btn primary" onclick="doPaste()">Paste Save Code</button>
-          <span class="savecode-status" id="savecode-import-status"></span>
-        </div>
-        <div class="savecode-hint" style="margin-top:8px">
-          Reads a save code from your clipboard and applies it to this device.
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Heatmap overlay -->
   <div class="glossary-overlay" id="heatmap-overlay" style="opacity:0">
@@ -1810,7 +1660,15 @@ const ALL=[
 
 const LETTERS=['A','B','C','D'];
 let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
-let _currentCorrect = null; // set internally at render time — never trusted from pick() caller
+
+// ── Server-side quiz state ────────────────────────────────────────────────────
+// The correct answer NEVER lives in the browser. The server signs each question
+// with HMAC; pick() sends the user's choice to submitAnswer which grades it.
+let _currentQuestionId   = null; // HMAC-signed token from getQuestion
+let _currentQuestionData = null; // full question payload (no correct answer)
+let _askedWords          = [];   // quiz mode: words already shown this session
+let _drillWords          = null; // null = normal pool; string[] = restricted drill
+let _isLoadingQuestion   = false;
 
 /* ── Spam protection ─────────────────────────────────────────────────────── */
 const SPAM_WINDOW_MS   = 10000; // rolling window to measure speed
@@ -1923,20 +1781,20 @@ function clearSelection(){
 
 function drillSelected(){
   if(!selectedWords.size) return;
-  const words = [...selectedWords].map(w=>ALL.find(x=>x.w===w)).filter(Boolean);
+  const words=[...selectedWords];
   selectedWords.clear();
   closeGlossary();
   closeHeatmap();
-  // Start a focused drill session with just these words
   mode='quiz';
   document.getElementById('mode-quiz').className='mode-btn active';
   document.getElementById('mode-flash').className='mode-btn';
   document.getElementById('dir-row').style.display='flex';
   document.getElementById('order-row').style.display='flex';
   document.getElementById('lesson-row').style.display='flex';
-  queue=shuffle([...words]);
-  current=0;score=0;answered=false;wrong=[];
-  render();
+  _drillWords=words;
+  score=0;answered=false;wrong=[];_askedWords=[];
+  _currentQuestionId=null;_currentQuestionData=null;
+  loadNextQuestion();
 }
 
 function hideSelected(){
@@ -2148,315 +2006,313 @@ function setMode(m){
 function startSession(){
   orderedPool=getPool();
   pool=flashShuffled?shuffle([...orderedPool]):[...orderedPool];
-  queue=quizOrder==='ordered'?[...orderedPool]:shuffle([...orderedPool]);
-  current=0;score=0;answered=false;wrong=[];flashIdx=0;flashState=0;
+  score=0;answered=false;wrong=[];flashIdx=0;flashState=0;
+  // Reset server-side quiz state
+  _askedWords=[];_drillWords=null;
+  _currentQuestionId=null;_currentQuestionData=null;
+  adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;
+  adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;
   render();
-}
-
-function makeOptions(item,showWord){
-  const p=getPool();
-  if(showWord){
-    // show definition, pick correct word from wrong word choices
-    const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
-    return shuffle([item,...w3]);
-  } else {
-    // show word, pick correct definition from wrong definition choices
-    const w3=shuffle(p.filter(x=>x.w!==item.w)).slice(0,3);
-    return shuffle([{...item,_isCorrect:true},...w3.map(x=>({...x,_isCorrect:false}))]);
-  }
 }
 
 function render(){
   const app=document.getElementById('app');
   if(mode==='flash'){renderFlash(app);return;}
-  if(mode==='adaptive'){renderAdaptive(app);return;}
-  if(current>=queue.length){renderResult(app);return;}
-  const item=queue[current];
-  // determine direction for this question
-  const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
-  // attach direction to item for pick() to use
-  item._showDef=showDef;
-  const opts=smartDistractors(item, 3);
-  opts.push(item);
-  const shuffled=shuffle(opts);
-  const pct=Math.round((current/queue.length)*100);
-  const lname=selectedLesson==='all'?`Lesson ${item.l} · ${LESSON_NAMES[item.l]}`:LESSON_NAMES[item.l];
-  const dirLabel=showDef?'Which word fits this definition?':'Select the correct definition:';
-  const prompt=showDef?`<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`:
-    `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
-  _currentCorrect = showDef ? item.w : item.d;
-  const optsHtml=shuffled.map((o,i)=>{
-    const label=showDef?o.w:o.d;
-    const safeLabel=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const safeKey=(showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
-  }).join('');
-  app.innerHTML=`
-    <div class="stats">
-      <div class="stat"><div class="stat-label">Progress</div><div class="stat-val">${current+1}<span style="font-size:14px;color:var(--muted)">/${queue.length}</span></div></div>
-      <div class="stat"><div class="stat-label">Correct</div><div class="stat-val">${score}</div></div>
-      <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${current>0?Math.round(score/current*100):0}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-    <div class="quiz-layout">
-      <div class="quiz-left qcard">
-        <div class="lesson-tag">${lname}</div>
-        ${prompt}
-      </div>
-      <div class="quiz-right">
-        <div class="options" id="opts">${optsHtml}</div>
-        <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
-        <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
-      </div>
-    </div>
-    <div class="kbd-hint">
-      <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span>
-      <span><kbd>Space</kbd> to advance</span>
-    </div>`;
+  loadNextQuestion();
 }
 
-function showAnswer(){
-  if(answered) return;
-  answered=true;
-  const item=queue[current];
-
-  // Count as wrong — adds to review list and stats
-  wrong.push(item);
-  trackAnswer(false, item.w);
-  if(mode==='adaptive'){adaptiveStreak=0;}
-
-  // Highlight the correct option and attach the example button, same as a normal wrong answer
-  const optEls=document.getElementById('opts').children;
-  const correctLabel=item._showDef ? item.w : item.d;
-  for(let i=0;i<optEls.length;i++){
-    optEls[i].classList.add('disabled');
-    const letter=optEls[i].querySelector('.opt-letter');
-    const labelNode=letter.nextSibling;
-    const label=labelNode?labelNode.textContent.trim():optEls[i].textContent.trim().slice(1);
-    if(label===correctLabel){
-      optEls[i].classList.add('correct');
-      const wrap=document.createElement('div');
-      wrap.style.display='flex';wrap.style.flexDirection='column';wrap.style.alignItems='flex-start';
-      const existingContent=Array.from(optEls[i].childNodes);
-      const inner=document.createElement('div');
-      existingContent.forEach(n=>inner.appendChild(n));
-      wrap.appendChild(inner);
-      const exBtn=document.createElement('button');
-      exBtn.className='example-btn';
-      exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
-      exBtn.onclick=e=>{e.stopPropagation();showExample(item,exBtn,wrap);};
-      wrap.appendChild(exBtn);
-      optEls[i].appendChild(wrap);
+// ── Server-side question loading ──────────────────────────────────────────────
+async function loadNextQuestion(){
+  if(_isLoadingQuestion) return;
+  _isLoadingQuestion=true;
+  answered=false;
+  const app=document.getElementById('app');
+  app.innerHTML=`<div class="qcard" style="min-height:180px;display:flex;align-items:center;justify-content:center;opacity:0.45">
+    <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)">Loading question…</div>
+  </div>`;
+  try{
+    const payload={
+      mode,
+      lesson:selectedLesson,
+      dir,
+      hiddenWords:[...hiddenWords],
+      askedWords: mode==='quiz'?_askedWords:[],
+      recentWords:mode==='adaptive'?adaptiveRecentWords:[]
+    };
+    if(_drillWords) payload.drillWords=_drillWords;
+    const res=await _cfGetQuestion(payload);
+    const q=res.data;
+    if(q.done){renderResult(document.getElementById('app'));return;}
+    _currentQuestionId=q.questionId;
+    _currentQuestionData=q;
+    if(mode==='adaptive'){
+      adaptiveRecentWords.push(q.word);
+      if(adaptiveRecentWords.length>12) adaptiveRecentWords.shift();
     }
+    renderQuestionFromServer(document.getElementById('app'),q);
+  }catch(err){
+    const msg=err.message&&err.message.includes('unauthenticated')
+      ?'Please sign in to continue.'
+      :'Could not load question — check your connection.';
+    document.getElementById('app').innerHTML=`<div class="qcard" style="text-align:center;padding:2rem">
+      <div style="color:var(--wrong);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1.25rem">${msg}</div>
+      <button class="rbtn" onclick="loadNextQuestion()">↺ Retry</button>
+    </div>`;
+  }finally{
+    _isLoadingQuestion=false;
   }
-
-  // Re-queue the word 2–5 questions ahead so it comes back this session (quiz mode).
-  // Adaptive handles it automatically via the lowered correct/seen ratio → higher weight.
-  if(mode==='quiz'){
-    const insertAt=Math.min(current + 2 + Math.floor(Math.random()*4), queue.length);
-    queue.splice(insertAt, 0, item);
-  }
-
-  const sab=document.getElementById('show-ans-btn');
-  if(sab) sab.style.display='none';
-  document.getElementById('nxt').style.display='block';
 }
 
-function pick(idx,chosen){
+function renderQuestionFromServer(app,q){
+  const isDefToWord=q.direction==='def-to-word';
+  const prompt=isDefToWord
+    ?`<div class="question">${q.dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${q.promptText}</div>`
+    :`<div class="question">${q.dirLabel}</div><div class="question-word">${q.promptText}</div>`;
+  const optsHtml=q.optionLabels.map((label,i)=>{
+    const safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safe}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
+  }).join('');
+  if(mode==='adaptive'){
+    const accuracy=adaptiveCount>0?Math.round(adaptiveScore/adaptiveCount*100):0;
+    const ws=q.wordHistory;
+    const wordPct=ws&&ws.seen>0?Math.round(ws.correct/ws.seen*100):null;
+    const wordBadge=wordPct!==null
+      ?`<span class="adaptive-word-badge" style="background:${wordPct>=90?'var(--hm-great)':wordPct>=75?'var(--hm-good)':wordPct>=50?'var(--hm-mid)':'var(--hm-low)'}">${wordPct}% hist.</span>`
+      :`<span class="adaptive-word-badge" style="background:var(--hm-unseen);opacity:0.7">New</span>`;
+    app.innerHTML=`
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Questions</div><div class="stat-val">${adaptiveCount+1}</div></div>
+        <div class="stat"><div class="stat-label">Streak</div><div class="stat-val">${adaptiveStreak}<span style="font-size:12px;color:var(--muted)"> best ${adaptiveBestStreak}</span></div></div>
+        <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${accuracy}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
+      </div>
+      <div class="quiz-layout">
+        <div class="quiz-left qcard">
+          <div class="lesson-tag" style="display:flex;align-items:center;gap:8px">${q.lessonName} ${wordBadge}</div>
+          ${prompt}
+        </div>
+        <div class="quiz-right">
+          <div class="options" id="opts">${optsHtml}</div>
+          <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
+          <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
+        </div>
+      </div>
+      <div class="kbd-hint"><span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span><span><kbd>Space</kbd> to advance</span></div>`;
+  } else {
+    const total=q.totalInPool||0;
+    const done=_askedWords.length;
+    const pct=total>0?Math.round((done/total)*100):0;
+    app.innerHTML=`
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Progress</div><div class="stat-val">${done+1}<span style="font-size:14px;color:var(--muted)">/${total}</span></div></div>
+        <div class="stat"><div class="stat-label">Correct</div><div class="stat-val">${score}</div></div>
+        <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${done>0?Math.round(score/done*100):0}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="quiz-layout">
+        <div class="quiz-left qcard">
+          <div class="lesson-tag">${q.lessonName}</div>
+          ${prompt}
+        </div>
+        <div class="quiz-right">
+          <div class="options" id="opts">${optsHtml}</div>
+          <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
+          <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
+        </div>
+      </div>
+      <div class="kbd-hint"><span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span><span><kbd>Space</kbd> to advance</span></div>`;
+  }
+}
+}
+
+async function showAnswer(){
+  if(answered) return;
+  // Treat as a skipped answer — server marks wrong, returns correct answer for display
+  await pick(-1,'__SKIP__');
+}
+
+async function pick(idx,chosen){
   if(answered)return;
   if(_spamCheck())return;
-  // Always use the internally-set correct answer — never trust the caller
-  const correct = _currentCorrect;
-  if(!correct) return;
+  if(!_currentQuestionId)return;
   answered=true;
-  const isRight=chosen===correct;
-  if(isRight){
-    score++;
-    if(mode==='adaptive'){adaptiveScore++;adaptiveStreak++;if(adaptiveStreak>adaptiveBestStreak)adaptiveBestStreak=adaptiveStreak;}
-  } else {
-    wrong.push(queue[current]);
-    if(mode==='adaptive') adaptiveStreak=0;
-    // Record which word the student confused the correct answer with.
-    // chosen is either a word name (showDef=true) or a definition string (showDef=false).
-    const correctWord = queue[current].w;
-    const showDefNow = queue[current]._showDef;
-    const confusedWithWord = showDefNow
-      ? chosen  // options were words — chosen IS the wrong word
-      : (ALL.find(x => x.d === chosen)?.w || null);  // options were defs — look up which word owns that def
-    if(confusedWithWord && confusedWithWord !== correctWord){
-      if(!wordStats[correctWord]) wordStats[correctWord] = { seen:0, correct:0 };
-      if(!wordStats[correctWord].confusedWith) wordStats[correctWord].confusedWith = {};
-      wordStats[correctWord].confusedWith[confusedWithWord] =
-        (wordStats[correctWord].confusedWith[confusedWithWord] || 0) + 1;
-    }
-  }
-  trackAnswer(isRight, queue[current].w);
+
+  // Disable all options immediately for responsiveness
+  const opts=document.getElementById('opts');
+  const optEls=opts?opts.children:[];
+  for(let i=0;i<optEls.length;i++) optEls[i].classList.add('disabled');
+  if(idx>=0&&optEls[idx]) optEls[idx].style.opacity='0.6';
   const sab=document.getElementById('show-ans-btn');
   if(sab) sab.style.display='none';
-  const item=queue[current];
-  const optEls=document.getElementById('opts').children;
-  for(let i=0;i<optEls.length;i++){
-    optEls[i].classList.add('disabled');
-    const letter=optEls[i].querySelector('.opt-letter');
-    const labelNode=letter.nextSibling;
-    const label=labelNode?labelNode.textContent.trim():optEls[i].textContent.trim().slice(1);
-    if(label===correct){
-      optEls[i].classList.add('correct');
-      // Inject example button below the correct option text
-      const wrap=document.createElement('div');
-      wrap.style.display='flex';wrap.style.flexDirection='column';wrap.style.alignItems='flex-start';
-      const existingContent=Array.from(optEls[i].childNodes);
-      const inner=document.createElement('div');
-      existingContent.forEach(n=>inner.appendChild(n));
-      wrap.appendChild(inner);
-      const exBtn=document.createElement('button');
-      exBtn.className='example-btn';
-      exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
-      exBtn.onclick=e=>{e.stopPropagation();showExample(item,exBtn,wrap);};
-      wrap.appendChild(exBtn);
-      // If wrong answer, check if the chosen word is a known confused pair of the correct word
-      if(!isRight){
-        const showDefNow=item._showDef;
-        const wrongWord=showDefNow?chosen:(ALL.find(x=>x.d===chosen)?.w||null);
-        const siblings=CONFUSED_MAP[item.w];
-        if(wrongWord && siblings && siblings.includes(wrongWord)){
+
+  try{
+    const q=_currentQuestionData;
+    const isDefToWord=q.direction==='def-to-word';
+    // Determine which word the user confused the answer with (for analytics)
+    let confusedWord=null;
+    if(idx>=0&&chosen!=='__SKIP__'){
+      if(isDefToWord){
+        confusedWord=chosen!==q.word?chosen:null;
+      } else {
+        const found=ALL.find(x=>x.d===chosen);
+        confusedWord=found&&found.w!==q.word?found.w:null;
+      }
+    }
+
+    const res=await _cfSubmitAnswer({
+      questionId:_currentQuestionId,
+      chosen:idx<0?'__SKIP__':chosen,
+      confusedWord
+    });
+    const result=res.data;
+
+    // Update local wordStats cache for heatmap/glossary display
+    // (server is the source of truth — we mirror from its response)
+    if(result.word){
+      if(!wordStats[result.word]) wordStats[result.word]={seen:0,correct:0};
+      wordStats[result.word].seen++;
+      if(result.isCorrect) wordStats[result.word].correct++;
+      wordStats[result.word].lastSeen=Date.now();
+      if(!result.isCorrect&&confusedWord){
+        if(!wordStats[result.word].confusedWith) wordStats[result.word].confusedWith={};
+        wordStats[result.word].confusedWith[confusedWord]=(wordStats[result.word].confusedWith[confusedWord]||0)+1;
+      }
+    }
+
+    // Session counters + activity day (wordStats writes handled server-side)
+    trackAnswer(result.isCorrect);
+
+    if(result.isCorrect){
+      score++;
+      if(mode==='adaptive'){adaptiveScore++;adaptiveStreak++;if(adaptiveStreak>adaptiveBestStreak)adaptiveBestStreak=adaptiveStreak;}
+    } else {
+      wrong.push({w:result.word,d:result.definition});
+      if(mode==='adaptive') adaptiveStreak=0;
+    }
+    if(mode==='quiz') _askedWords.push(result.word);
+    if(mode==='adaptive') adaptiveCount++;
+
+    // Apply visual result to option buttons
+    const els=document.getElementById('opts')?.children||[];
+    for(let i=0;i<els.length;i++){
+      const letter=els[i].querySelector('.opt-letter');
+      const labelNode=letter?letter.nextSibling:null;
+      const label=labelNode?labelNode.textContent.trim():els[i].textContent.trim().slice(1);
+      els[i].style.opacity='';
+      if(label===result.correctAnswer){
+        els[i].classList.add('correct');
+        _attachExampleBtn(els[i],result);
+        if(!result.isCorrect&&result.siblings&&confusedWord&&result.siblings.includes(confusedWord)){
           const tip=document.createElement('div');
           tip.className='confusion-tip';
-          tip.innerHTML=`⚠️ <strong>${item.w}</strong> and <strong>${wrongWord}</strong> are commonly confused — review both in <a href="#" onclick="event.stopPropagation();openGlossary();return false;">All Words</a>.`;
-          wrap.appendChild(tip);
+          tip.innerHTML=`⚠️ <strong>${result.word}</strong> and <strong>${confusedWord}</strong> are commonly confused — review both in <a href="#" onclick="event.stopPropagation();openGlossary();return false;">All Words</a>.`;
+          els[i].appendChild(tip);
         }
+      } else if(i===idx&&!result.isCorrect){
+        els[i].classList.add('wrong');
+        _attachRevealBtn(els[i],chosen,isDefToWord);
       }
-      optEls[i].appendChild(wrap);
     }
-    else if(i===idx&&!isRight){
-      optEls[i].classList.add('wrong');
-      // Inject reveal button so user can look up the other side of their wrong pick
-      const showDef=item._showDef;
-      const revWrap=document.createElement('div');
-      revWrap.style.cssText='display:flex;flex-direction:column;align-items:flex-start;';
-      const revExisting=Array.from(optEls[i].childNodes);
-      const revInner=document.createElement('div');
-      revExisting.forEach(n=>revInner.appendChild(n));
-      revWrap.appendChild(revInner);
-      const revBtn=document.createElement('button');
-      revBtn.className='example-btn';
-      revBtn.style.cssText='border-color:rgba(255,92,122,0.35);background:rgba(255,92,122,0.07);color:var(--wrong);';
-      const eyeIcon=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><ellipse cx="6" cy="6" rx="5" ry="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>`;
-      revBtn.innerHTML=showDef?`${eyeIcon}Show Definition`:`${eyeIcon}Show Word`;
-      revBtn.onclick=e=>{
-        e.stopPropagation();
-        revBtn.remove();
-        const revPanel=document.createElement('div');
-        revPanel.className='example-panel';
-        revPanel.style.cssText='border-color:rgba(255,92,122,0.18);background:rgba(255,92,122,0.05);';
-        if(showDef){
-          // Question showed a definition; options were words — reveal def of the wrong word picked
-          const found=ALL.find(x=>x.w===chosen);
-          const def=found?found.d:'No definition found.';
-          revPanel.innerHTML=`<div class="ex-sentence" style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong);margin-bottom:4px">${chosen}</div><div class="ex-sentence">${def}</div>`;
-        } else {
-          // Question showed a word; options were definitions — reveal which word the wrong def belongs to
-          const found=ALL.find(x=>x.d===chosen);
-          const word=found?found.w:'Unknown';
-          revPanel.innerHTML=`<div class="ex-sentence" style="font-size:11px;font-family:\'DM Mono\',monospace;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">This definition belongs to:</div><div class="ex-sentence" style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong)">${word}</div>`;
-        }
-        revWrap.appendChild(revPanel);
-      };
-      revWrap.appendChild(revBtn);
-      optEls[i].appendChild(revWrap);
+    document.getElementById('nxt').style.display='block';
+
+  }catch(err){
+    // Network or token-expired error — restore the question so user can retry
+    answered=false;
+    const els=document.getElementById('opts')?.children||[];
+    for(let i=0;i<els.length;i++){els[i].classList.remove('disabled');els[i].style.opacity='';}
+    if(sab) sab.style.display='';
+    const expired=err.message&&(err.message.includes('expired')||err.message.includes('invalid'));
+    if(expired){
+      // Token expired (>10 min since question loaded) — auto-advance
+      answered=true;
+      if(sab) sab.style.display='none';
+      document.getElementById('nxt').style.display='block';
+      _showSpamToast('Question timed out — click Next for a new one.');
+    } else {
+      _showSpamToast('Network error — please try again.');
     }
   }
-  document.getElementById('nxt').style.display='block';
+}
+
+function _attachExampleBtn(el,result){
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;align-items:flex-start;';
+  Array.from(el.childNodes).forEach(n=>wrap.appendChild(n));
+  const inner=document.createElement('div');
+  // wrap existing content
+  const tmp=document.createDocumentFragment();
+  Array.from(wrap.childNodes).forEach(n=>tmp.appendChild(n));
+  inner.appendChild(tmp);
+  wrap.appendChild(inner);
+  const exBtn=document.createElement('button');
+  exBtn.className='example-btn';
+  exBtn.innerHTML=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="5" x2="6" y2="8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="6" cy="3.5" r=".75" fill="currentColor"/></svg>Example sentence`;
+  exBtn.onclick=e=>{
+    e.stopPropagation();exBtn.remove();
+    const panel=document.createElement('div');
+    panel.className='example-panel';
+    const sentence=result.example||'No example available for this word.';
+    const highlighted=sentence.replace(new RegExp(`\\b(${result.word}\\w*)`,'gi'),'<em>$1</em>');
+    panel.innerHTML=`<div class="ex-sentence">${highlighted}</div>`;
+    wrap.appendChild(panel);
+  };
+  wrap.appendChild(exBtn);
+  el.appendChild(wrap);
+}
+
+function _attachRevealBtn(el,chosen,isDefToWord){
+  const revWrap=document.createElement('div');
+  revWrap.style.cssText='display:flex;flex-direction:column;align-items:flex-start;';
+  const inner=document.createElement('div');
+  Array.from(el.childNodes).forEach(n=>inner.appendChild(n));
+  revWrap.appendChild(inner);
+  const revBtn=document.createElement('button');
+  revBtn.className='example-btn';
+  revBtn.style.cssText='border-color:rgba(255,92,122,0.35);background:rgba(255,92,122,0.07);color:var(--wrong);';
+  const eye=`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><ellipse cx="6" cy="6" rx="5" ry="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>`;
+  revBtn.innerHTML=isDefToWord?`${eye}Show Definition`:`${eye}Show Word`;
+  revBtn.onclick=e=>{
+    e.stopPropagation();revBtn.remove();
+    const panel=document.createElement('div');
+    panel.className='example-panel';
+    panel.style.cssText='border-color:rgba(255,92,122,0.18);background:rgba(255,92,122,0.05);';
+    if(isDefToWord){
+      const found=ALL.find(x=>x.w===chosen);
+      const def=found?found.d:'No definition found.';
+      panel.innerHTML=`<div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong);margin-bottom:4px">${chosen}</div><div class="ex-sentence">${def}</div>`;
+    } else {
+      const found=ALL.find(x=>x.d===chosen);
+      const word=found?found.w:'Unknown';
+      panel.innerHTML=`<div class="ex-sentence" style="font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">This definition belongs to:</div><div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong)">${word}</div>`;
+    }
+    revWrap.appendChild(panel);
+  };
+  revWrap.appendChild(revBtn);
+  el.appendChild(revWrap);
 }
 
 
 
-
-function showExample(item,btn,wrap){
-  btn.remove();
-  const panel=document.createElement('div');
-  panel.className='example-panel';
-  const sentence=item.e||'No example available for this word.';
-  // Highlight the word in the sentence
-  const highlighted=sentence.replace(
-    new RegExp(`\\b(${item.w}\\w*)`, 'gi'),
-    `<em>$1</em>`
-  );
-  panel.innerHTML=`<div class="ex-sentence">${highlighted}</div>`;
-  wrap.appendChild(panel);
-}
-
-
-
-function renderAdaptive(app){
-  const item = nextAdaptiveWord();
-  // track recent words (avoid repeats in last 5)
-  adaptiveRecentWords.push(item.w);
-  if(adaptiveRecentWords.length > 12) adaptiveRecentWords.shift();
-  queue[current] = item; // store so pick() can reference it
-  const showDef = dir==='word' ? false : dir==='def' ? true : Math.random()<0.5;
-  item._showDef = showDef;
-  // Build distractors using the shared smart scoring function.
-  const opts = smartDistractors(item, 3);
-  opts.push(item);
-  const shuffled = shuffle(opts);
-  const lname = `Lesson ${item.l} · ${LESSON_NAMES[item.l]}`;
-  const dirLabel = showDef?'Which word fits this definition?':'Select the correct definition:';
-  const prompt = showDef
-    ? `<div class="question">${dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${item.d}</div>`
-    : `<div class="question">${dirLabel}</div><div class="question-word">${item.w}</div>`;
-  _currentCorrect = showDef ? item.w : item.d;
-  const optsHtml = shuffled.map((o,i)=>{
-    const label = showDef?o.w:o.d;
-    const safeLabel = label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const safeKey = (showDef?o.w:o.d).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safeKey}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
-  }).join('');
-  const accuracy = adaptiveCount > 0 ? Math.round(adaptiveScore/adaptiveCount*100) : 0;
-  const s = wordStats[item.w];
-  const wordPct = s && s.seen > 0 ? Math.round(s.correct/s.seen*100) : null;
-  const wordBadge = wordPct !== null
-    ? `<span class="adaptive-word-badge" style="background:${wordPct>=90?'var(--hm-great)':wordPct>=75?'var(--hm-good)':wordPct>=50?'var(--hm-mid)':'var(--hm-low)'}">${wordPct}% hist.</span>`
-    : `<span class="adaptive-word-badge" style="background:var(--hm-unseen);opacity:0.7">New</span>`;
-  app.innerHTML=`
-    <div class="stats">
-      <div class="stat"><div class="stat-label">Questions</div><div class="stat-val">${adaptiveCount+1}</div></div>
-      <div class="stat"><div class="stat-label">Streak</div><div class="stat-val">${adaptiveStreak}<span style="font-size:12px;color:var(--muted)"> best ${adaptiveBestStreak}</span></div></div>
-      <div class="stat"><div class="stat-label">Accuracy</div><div class="stat-val">${accuracy}<span style="font-size:14px;color:var(--muted)">%</span></div></div>
-    </div>
-    <div class="quiz-layout">
-      <div class="quiz-left qcard">
-        <div class="lesson-tag" style="display:flex;align-items:center;gap:8px">${lname} ${wordBadge}</div>
-        ${prompt}
-      </div>
-      <div class="quiz-right">
-        <div class="options" id="opts">${optsHtml}</div>
-        <button class="show-ans-btn" id="show-ans-btn" onclick="showAnswer()">I don't know — show answer</button>
-        <button class="next-btn" id="nxt" style="display:none" onclick="nextQ()">Next Question →</button>
-      </div>
-    </div>
-    <div class="kbd-hint">
-      <span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> to answer</span>
-      <span><kbd>Space</kbd> to advance</span>
-    </div>`;
-}
 
 function nextQ(){
   if(_spamLocked)return;
-  answered=false;
-  if(mode==='adaptive'){adaptiveCount++;render();return;}
-  current++;render();
+  if(mode==='adaptive'||mode==='quiz') loadNextQuestion();
 }
 
+
+
+
+
+
 function renderResult(app){
-  const pct=Math.round(score/queue.length*100);
+  const total=_askedWords.length||1;
+  const pct=Math.round(score/total*100);
   const msg=pct>=90?'Excellent work. You know this material.':pct>=70?'Good result. Brush up on the words below and you\'ll be ready.':pct>=50?'A decent start. Go through the words below and run the quiz again to reinforce them.':'More review needed. Work through the list below, then retake the quiz.';
   const rev=wrong.length?`<div class="review-section">
     <div class="review-header">Study these ${wrong.length} word${wrong.length>1?'s':''} before your final</div>
     ${wrong.map(w=>`<div class="review-item"><div class="review-word">${w.w}</div><div class="review-def">${w.d}</div></div>`).join('')}
   </div>`:`<div style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--correct);margin-top:1rem">Perfect score — nothing to review.</div>`;
   app.innerHTML=`<div class="qcard result">
-    <div class="big-score">${score}/${queue.length}</div>
+    <div class="big-score">${score}/${total}</div>
     <div class="result-pct">${pct}% correct</div>
     <div class="result-msg">${msg}</div>
     <div class="result-btns">
@@ -2468,10 +2324,16 @@ function renderResult(app){
   </div>`;
 }
 
-function retakeWrong(){queue=shuffle([...wrong]);current=0;score=0;answered=false;wrong=[];render();}
+function retakeWrong(){
+  if(!wrong.length) return;
+  _drillWords=wrong.map(w=>w.w);
+  score=0;answered=false;wrong=[];_askedWords=[];
+  _currentQuestionId=null;_currentQuestionData=null;
+  loadNextQuestion();
+}
 
 function flashAssess(knew){
-  trackAnswer(knew, pool[flashIdx].w);
+  trackAnswer(knew);
   flashNav(1);
 }
 
@@ -2864,10 +2726,12 @@ const _cfSyncGlobalStats = d => _callCF('syncGlobalStats', d);
 const _cfEndSession      = d => _callCF('endSession', d);
 const _cfSavePreferences = d => _callCF('savePreferences', d);
 const _cfSaveHidden      = d => _callCF('saveHidden', d);
-const _cfPushImport      = d => _callCF('pushImportToFirestore', d);
 const _cfWriteEmail      = d => _callCF('writeEmail', d);
 const _cfDeleteAnonDocs  = d => _callCF('deleteAnonDocs', d);
 const _cfMergeAnonData   = d => _callCF('mergeAnonData', d);
+// ── Server-side quiz grading — correct answer never touches the browser ───────
+const _cfGetQuestion     = d => _callCF('getQuestion', d);
+const _cfSubmitAnswer    = d => _callCF('submitAnswer', d);
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
@@ -3355,25 +3219,15 @@ async function syncGlobalStats() {
   }
 }
 
-function trackAnswer(isRight, word) {
+function trackAnswer(isRight) {
   if (!fbUser) return;
-  // Update local per-word stats
-  if (word) {
-    if (!wordStats[word]) wordStats[word] = { seen: 0, correct: 0 };
-    wordStats[word].seen++;
-    if (isRight) wordStats[word].correct++;
-    wordStats[word].lastSeen = Date.now(); // timestamp for spaced repetition
-  }
   // Daily activity log — used for streak calculation
-  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const today = new Date().toISOString().slice(0, 10);
   if (!activityDays.includes(today)) activityDays.push(today);
   // Per-session counters
   sessionQuestionsAnswered++;
   if (isRight) sessionCorrectAnswers++;
-
-  // Buffer the answer — flushTime() drains these every 60s (and on tab hide/close),
-  // collapsing what were previously 3 immediate Firestore writes per answer into a
-  // single batched write. wordStats is already flushed by flushTime() separately.
+  // Buffer for the next flush — word stats are written server-side by submitAnswer
   pendingAnswers++;
   if (isRight) pendingCorrect++;
 }
@@ -3423,240 +3277,18 @@ window.addEventListener("beforeunload", () => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Save / Load Code ────────────────────────────────────────────────────────
-const SAVE_CODE_VERSION = 2;
-
-function openSaveCode() {
-  document.getElementById('savecode-overlay').classList.add('open');
-  document.getElementById('savecode-copy-status').className = 'savecode-status';
-  document.getElementById('savecode-import-status').className = 'savecode-status';
-}
-
-function closeSaveCode() {
-  document.getElementById('savecode-overlay').classList.remove('open');
-}
-
-function generateSaveCode() {
-  const payload = {
-    v: SAVE_CODE_VERSION,
-    // ── Persistent data ──────────────────────────────────────────────────────
-    ws: wordStats,
-    ad: activityDays,
-    hw: [...hiddenWords],
-    us: localUserSeconds,
-    sh: sessionHistory,
-    // ── Full UI + session snapshot ────────────────────────────────────────────
-    ss: {
-      // Appearance & layout
-      theme:             localStorage.getItem('vocab_theme') || 'dark',
-      settingsCollapsed: localStorage.getItem('vocab_settings_collapsed') === '1',
-      // Mode / direction / order / lesson
-      mode:              mode,
-      dir:               dir,
-      order:             quizOrder,
-      lesson:            selectedLesson,
-      // Quiz session — queue as word strings so it's compact
-      queue:             queue.map(item => item.w),
-      current:           current,
-      score:             score,
-      wrong:             wrong.map(item => item.w),
-      // Flash state
-      flashIdx:          flashIdx,
-      flashShuffled:     flashShuffled,
-      // Adaptive state
-      adaptiveCount:       adaptiveCount,
-      adaptiveScore:       adaptiveScore,
-      adaptiveStreak:      adaptiveStreak,
-      adaptiveBestStreak:  adaptiveBestStreak,
-      adaptiveRecentWords: adaptiveRecentWords,
-      adaptiveNextReview:  adaptiveNextReview
-    }
-  };
-  return LZString.compressToBase64(JSON.stringify(payload));
-}
-
-function applySaveCode(code) {
-  const json = LZString.decompressFromBase64(code.trim());
-  if (!json) throw new Error('Decompression failed.');
-  const data = JSON.parse(json);
-  if (!data || (data.v !== 1 && data.v !== SAVE_CODE_VERSION)) throw new Error('Unrecognized version.');
-
-  // ── Core persistent data ──────────────────────────────────────────────────
-  wordStats        = data.ws || {};
-  activityDays     = data.ad || [];
-  hiddenWords      = new Set(data.hw || []);
-  localUserSeconds = data.us || 0;
-  sessionHistory   = data.sh || [];
-  localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
-
-  // ── v1 legacy: preferences only, no session state ─────────────────────────
-  if (data.v === 1) {
-    if (data.pr) { try { applyPreferences(data.pr); } catch(e) {} }
-    return;
-  }
-
-  // ── v2: full snapshot restore ─────────────────────────────────────────────
-  const ss = data.ss || {};
-
-  // Theme
-  setTheme(ss.theme || 'dark');
-
-  // Settings panel collapse state
-  const panel = document.getElementById('settings-panel');
-  if (ss.settingsCollapsed) {
-    panel.classList.add('collapsed');
-    localStorage.setItem('vocab_settings_collapsed', '1');
-  } else {
-    panel.classList.remove('collapsed');
-    localStorage.setItem('vocab_settings_collapsed', '0');
-  }
-
-  // Direction buttons
-  dir = ss.dir || 'word';
-  ['word','def','random'].forEach(k => {
-    const el = document.getElementById('dir-' + k);
-    if (el) el.className = 'dir-btn' + (dir === k ? ' active' : '');
-  });
-
-  // Order buttons
-  quizOrder = ss.order || 'random';
-  const ordEl = document.getElementById('order-ordered');
-  const rndEl = document.getElementById('order-random');
-  if (ordEl) ordEl.className = 'dir-btn' + (quizOrder === 'ordered' ? ' active' : '');
-  if (rndEl) rndEl.className = 'dir-btn' + (quizOrder === 'random'  ? ' active' : '');
-
-  // Mode and lesson
-  mode           = ss.mode   || 'adaptive';
-  selectedLesson = ss.lesson !== undefined ? ss.lesson : 'all';
-
-  // Mode buttons + row visibility
-  const mq = document.getElementById('mode-quiz');
-  const mf = document.getElementById('mode-flash');
-  const dirRow    = document.getElementById('dir-row');
-  const orderRow  = document.getElementById('order-row');
-  const lessonRow = document.getElementById('lesson-row');
-  if (mode === 'flash') {
-    if (mq) mq.className = 'mode-btn';
-    if (mf) mf.className = 'mode-btn active';
-    if (dirRow)    dirRow.style.display    = 'none';
-    if (orderRow)  orderRow.style.display  = 'none';
-    if (lessonRow) lessonRow.style.display = 'none';
-  } else {
-    if (mq) mq.className = 'mode-btn active';
-    if (mf) mf.className = 'mode-btn';
-    if (dirRow)    dirRow.style.display    = (mode === 'quiz' || mode === 'adaptive') ? 'flex' : 'none';
-    if (orderRow)  orderRow.style.display  = mode === 'quiz' ? 'flex' : 'none';
-    if (lessonRow) lessonRow.style.display = 'flex';
-  }
-  buildLessonRow();
-
-  // Rebuild pool from restored lesson/mode
-  orderedPool  = getPool();
-  flashShuffled = ss.flashShuffled || false;
-  pool = flashShuffled ? shuffle([...orderedPool]) : [...orderedPool];
-
-  // Adaptive state
-  adaptiveCount       = ss.adaptiveCount       || 0;
-  adaptiveScore       = ss.adaptiveScore       || 0;
-  adaptiveStreak      = ss.adaptiveStreak      || 0;
-  adaptiveBestStreak  = ss.adaptiveBestStreak  || 0;
-  adaptiveRecentWords = ss.adaptiveRecentWords || [];
-  adaptiveNextReview  = ss.adaptiveNextReview  || Math.floor(Math.random()*3)+4;
-
-  // Quiz session state — restore queue from saved word strings
-  if (ss.queue && ss.queue.length > 0) {
-    queue   = ss.queue.map(w => ALL.find(item => item.w === w)).filter(Boolean);
-    current = Math.min(ss.current || 0, Math.max(0, queue.length - 1));
-    score   = ss.score || 0;
-    wrong   = (ss.wrong || []).map(w => ALL.find(item => item.w === w)).filter(Boolean);
-  } else {
-    queue   = quizOrder === 'ordered' ? [...orderedPool] : shuffle([...orderedPool]);
-    current = 0; score = 0; wrong = [];
-  }
-  answered  = false; // always land on question unanswered — clean state
-
-  // Flash position
-  flashIdx   = Math.min(ss.flashIdx || 0, Math.max(0, pool.length - 1));
-  flashState = 0; // always show front of card on load
-
-  render();
-  pushImportToFirestore();
-}
-
-// Immediately writes all imported data via Cloud Function so the new device is in
-// sync right away, rather than waiting for the next 60-second flush cycle.
-async function pushImportToFirestore() {
-  if (!fbUser) return;
-  try {
-    await _cfPushImport({
-      wordStats,
-      userSeconds:  localUserSeconds,
-      totalTime:    fmtHMS(localUserSeconds),
-      activityDays,
-      hiddenWords:  [...hiddenWords],
-    });
-    lastFlushUserSeconds = localUserSeconds;
-  } catch (err) {
-    console.warn("pushImportToFirestore CF error:", err);
-  }
-}
-
-// Generates the code and writes it straight to the clipboard.
-function doCopy() {
-  const status = document.getElementById('savecode-copy-status');
-  try {
-    const code = generateSaveCode();
-    navigator.clipboard.writeText(code).then(() => {
-      status.textContent = '✓ Copied!';
-      status.className = 'savecode-status ok';
-      setTimeout(() => { status.className = 'savecode-status'; }, 2500);
-    }).catch(() => {
-      status.textContent = 'Clipboard blocked — try a different browser';
-      status.className = 'savecode-status err';
-    });
-  } catch(e) {
-    status.textContent = 'Failed to generate code';
-    status.className = 'savecode-status err';
-  }
-}
-
-// Reads directly from clipboard and applies the code.
-function doPaste() {
-  const status = document.getElementById('savecode-import-status');
-  navigator.clipboard.readText().then(code => {
-    if (!code || !code.trim()) {
-      status.textContent = 'Clipboard is empty';
-      status.className = 'savecode-status err';
-      return;
-    }
-    try {
-      applySaveCode(code);
-      status.textContent = '✓ Data loaded!';
-      status.className = 'savecode-status ok';
-      setTimeout(closeSaveCode, 1200);
-    } catch(e) {
-      status.textContent = 'Invalid code — was it copied in full?';
-      status.className = 'savecode-status err';
-    }
-  }).catch(() => {
-    status.textContent = 'Clipboard access denied — check browser permissions';
-    status.className = 'savecode-status err';
-  });
-}
 // ─────────────────────────────────────────────────────────────────────────────
 // ── Expose only UI-triggered functions to window (onclick attributes need these)
-// pick, nextQ, ALL, and internal state are intentionally NOT exposed.
 const _uiFns = {
   setMode, setOrder, setDir, setTheme, startSession, openGlossary, closeGlossary,
-  openHeatmap, closeHeatmap, openSaveCode, closeSaveCode, doCopy, doPaste,
-  toggleSettings, selectLesson, drillSelected, hideSelected, restoreSelected,
-  clearSelection, saveHidden, toggleWordSelect, retakeWrong,
-  showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle
+  openHeatmap, closeHeatmap, toggleSettings, selectLesson, drillSelected,
+  hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
+  retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
+  manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay
 };
 Object.assign(window, _uiFns);
-// pick and nextQ exposed minimally — but correct answer is internal-only
-window.pick   = pick;
-window.nextQ  = nextQ;
+window.pick  = pick;
+window.nextQ = nextQ;
 })();
 </script>
 </body>
