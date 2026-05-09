@@ -2570,6 +2570,20 @@ function closeGlossary(){
   if(glossaryObserver){glossaryObserver.disconnect();glossaryObserver=null;}
 }
 
+// ─── Firebase Tracking ───────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyC8Uo4lppy5RojXCXG-KIj30OHcrXcEpkI",
+  authDomain: "vocab-tool-testing.firebaseapp.com",
+  projectId: "vocab-tool-testing",
+  storageBucket: "vocab-tool-testing.firebasestorage.app",
+  messagingSenderId: "604425746281",
+  appId: "1:604425746281:web:6fa5ff08327002bbfaeff8"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
 selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
 if(localStorage.getItem('vocab_settings_collapsed')==='1'){
@@ -2687,20 +2701,6 @@ function closeHeatmap() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-// ─── Firebase Tracking ───────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyC8Uo4lppy5RojXCXG-KIj30OHcrXcEpkI",
-  authDomain: "vocab-tool-testing.firebaseapp.com",
-  projectId: "vocab-tool-testing",
-  storageBucket: "vocab-tool-testing.firebasestorage.app",
-  messagingSenderId: "604425746281",
-  appId: "1:604425746281:web:6fa5ff08327002bbfaeff8"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // ── Cloud Function callables — all Firestore writes go through here ───────────
 async function _callCF(name, data) {
