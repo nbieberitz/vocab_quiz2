@@ -1843,6 +1843,7 @@ let sessionCorrectAnswers = 0;
 let pendingAnswers = 0;
 let pendingCorrect = 0;
 let flushCount = 0; // increments each flush; syncGlobalStats runs every 5th flush (5 min)
+let _prefetchPromise = null; // holds in-flight getQuestion call for instant next-question render
 
 function toggleSettings(){
   const panel = document.getElementById('settings-panel');
@@ -2010,6 +2011,7 @@ function startSession(){
   // Reset server-side quiz state
   _askedWords=[];_drillWords=null;
   _currentQuestionId=null;_currentQuestionData=null;
+  _prefetchPromise=null; // stale prefetch — mode/lesson may have changed
   adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;
   adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;
   render();
@@ -2022,6 +2024,23 @@ function render(){
 }
 
 // ── Server-side question loading ──────────────────────────────────────────────
+
+// Fires getQuestion in the background and caches the promise.
+// Called right after submitAnswer resolves (while user reads feedback) and on page load.
+function _firePrefetch(){
+  if(!auth.currentUser||mode==='flash') return;
+  const payload={
+    mode,
+    lesson:selectedLesson,
+    dir,
+    hiddenWords:[...hiddenWords],
+    askedWords: mode==='quiz'?[..._askedWords]:[],
+    recentWords:mode==='adaptive'?[...adaptiveRecentWords]:[]
+  };
+  if(_drillWords) payload.drillWords=[..._drillWords];
+  _prefetchPromise=_cfGetQuestion(payload).catch(()=>null);
+}
+
 async function loadNextQuestion(){
   // Auth not ready yet — show a waiting state. The auth listener will call render() once ready.
   if(!auth.currentUser){
@@ -2048,7 +2067,17 @@ async function loadNextQuestion(){
       recentWords:mode==='adaptive'?adaptiveRecentWords:[]
     };
     if(_drillWords) payload.drillWords=_drillWords;
-    const res=await _cfGetQuestion(payload);
+
+    // Use prefetched result if available, otherwise fire fresh
+    let res;
+    if(_prefetchPromise){
+      res=await _prefetchPromise;
+      _prefetchPromise=null;
+      if(!res) res=await _cfGetQuestion(payload); // prefetch failed — fall back
+    } else {
+      res=await _cfGetQuestion(payload);
+    }
+
     const q=res.data;
     if(q.done){renderResult(document.getElementById('app'));return;}
     _currentQuestionId=q.questionId;
@@ -2196,6 +2225,9 @@ async function pick(idx,chosen){
     }
     if(mode==='quiz') _askedWords.push(result.word);
     if(mode==='adaptive') adaptiveCount++;
+
+    // Prefetch next question while user reads feedback — will be ready by the time they click Next
+    _firePrefetch();
 
     // Apply visual result to option buttons
     const els=document.getElementById('opts')?.children||[];
@@ -2775,11 +2807,17 @@ auth.onAuthStateChanged(async user => {
 
   initializedUid = user.uid;
   fbUser = user;
+  // Fire getQuestion immediately in parallel with initUserDoc so the first
+  // question is (often) ready by the time initUserDoc completes.
+  const prefetchMode = mode, prefetchLesson = selectedLesson;
+  if(mode !== 'flash') _firePrefetch();
   try {
     await initUserDoc(user);
   } catch (err) {
     console.error("initUserDoc error:", err);
   }
+  // If applyPreferences changed mode or lesson, the prefetch used wrong params — discard it
+  if(mode !== prefetchMode || selectedLesson !== prefetchLesson) _prefetchPromise = null;
   startSecondTimer();
   updateAuthUI(user);
   // Auth is now ready — load the first question if the app is sitting on a waiting/connecting state
