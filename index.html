@@ -3625,10 +3625,9 @@ function showScreen(name) {
 function handleRoute() {
   const hash = window.location.hash.replace('#', '');
   if (hash.startsWith('quiz-')) {
-    const quizId = hash.slice(5);
+    const wasAlreadyOnQuiz = _currentScreen === 'quiz';
     showScreen('quiz');
-    // Reset and start the quiz if switching from list
-    if (_currentScreen !== 'quiz') startSession();
+    if (!wasAlreadyOnQuiz && !_initializing) startSession();
   } else if (hash === 'submit') {
     showScreen('submit');
   } else {
