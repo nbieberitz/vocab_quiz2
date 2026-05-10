@@ -3130,24 +3130,27 @@ auth.onAuthStateChanged(async user => {
   } else {
     showScreen('list');
     loadQuizList();
-    startActiveUsersListener();
+    startActiveUsersPoll();
   }
 });
 
-let _activeUsersUnsub = null;
-function startActiveUsersListener() {
-  if (_activeUsersUnsub) return; // already listening
-  _activeUsersUnsub = db.collection('stats').doc('activeUsers')
-    .onSnapshot(snap => {
-      if (!snap.exists) return;
-      const count = snap.data().count || 0;
+let _activeUsersPollTimer = null;
+function startActiveUsersPoll() {
+  if (_activeUsersPollTimer) return; // already polling
+  const poll = async () => {
+    try {
+      const res   = await _callCF('getActiveUsers', {});
+      const count = res.data.count || 0;
       const pill  = document.getElementById('active-users-pill');
       const label = document.getElementById('active-users-count');
       if (pill && label) {
         label.textContent = count;
         pill.style.display = count > 0 ? '' : 'none';
       }
-    }, () => {}); // silently ignore permission errors
+    } catch (e) {}
+  };
+  poll(); // immediate first call
+  _activeUsersPollTimer = setInterval(poll, 30000);
 }
 
 async function initUserDoc(user) {
