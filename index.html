@@ -2242,7 +2242,9 @@ function startSession(){
   // Reset server-side quiz state
   _askedWords=[];_drillWords=null;
   _currentQuestionId=null;_currentQuestionData=null;
-  _prefetchPromise=null; // stale prefetch — mode/lesson may have changed
+  _prefetchPromise=null;
+  _readyQuestion=null;      // clear startup prefetch — new session always fetches fresh
+  _isLoadingQuestion=false; // reset in case a previous attempt left it stuck
   adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;
   adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;
   render();
