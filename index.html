@@ -3083,6 +3083,8 @@ auth.onAuthStateChanged(async user => {
 
     if (q1?.data && !q1.data.done) {
       const word1 = q1.data.word;
+      // Warm up submitAnswer in the background — no await, no stats touched
+      _cfSubmitAnswer({ questionId: q1.data.questionId, chosen: '__warmup__', warmup: true }).catch(() => {});
       _prefetchPromise = _cfGetQuestion({
         mode, lesson: selectedLesson, dir,
         hiddenWords: [...hiddenWords],
@@ -3444,6 +3446,8 @@ async function loadQuizAndStart() {
 
     if (q1?.data && !q1.data.done) {
       const word1 = q1.data.word;
+      // Warm up submitAnswer in the background — no await, no stats touched
+      _cfSubmitAnswer({ questionId: q1.data.questionId, chosen: '__warmup__', warmup: true }).catch(() => {});
       _prefetchPromise = _cfGetQuestion({
         mode, lesson: selectedLesson, dir,
         hiddenWords: [...hiddenWords],
