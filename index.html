@@ -2875,7 +2875,6 @@ firebase.initializeApp(firebaseConfig);
 const auth            = firebase.auth();
 const db              = firebase.firestore();
 const storageRef      = firebase.storage();
-const googleProvider  = new firebase.auth.GoogleAuthProvider();
 
 selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
@@ -3025,9 +3024,6 @@ const _cfSyncGlobalStats = d => _callCF('syncGlobalStats', d);
 const _cfEndSession      = d => _callCF('endSession', d);
 const _cfSavePreferences = d => _callCF('savePreferences', d);
 const _cfSaveHidden      = d => _callCF('saveHidden', d);
-const _cfWriteEmail      = d => _callCF('writeEmail', d);
-const _cfDeleteAnonDocs  = d => _callCF('deleteAnonDocs', d);
-const _cfMergeAnonData   = d => _callCF('mergeAnonData', d);
 const _cfGetQuizList     = d => _callCF('getQuizList', d);
 const _cfSubmitQuiz      = d => _callCF('submitQuiz', d);
 const _cfGetMySubmissions= d => _callCF('getMySubmissions', d);
@@ -3046,26 +3042,16 @@ function fmtHMS(s) {
 
 // ── Auth state listener — handles both anon and Google users ──────────────────
 let initializedUid = null;
-let signingOut = false;
-let suppressAnon = false;
-let cachedGoogleProfile = null;
 
 auth.onAuthStateChanged(async user => {
   if (!user) {
-    if (signingOut || suppressAnon) { updateAuthUI(null); return; }
     auth.signInAnonymously().catch(err => console.warn("Anon auth error:", err));
     return;
   }
 
-  // If UID hasn't changed (e.g. linkWithPopup just upgraded the same anon account),
-  // skip re-initializing — just update fbUser reference and the UI.
+  // If UID hasn't changed, skip re-initializing
   if (user.uid === initializedUid) {
     fbUser = user;
-    // If this is a just-upgraded Google account, write the email now
-    if (user.email) {
-      _cfWriteEmail({ email: user.email }).catch(() => {});
-    }
-    updateAuthUI(user);
     return;
   }
 
@@ -3120,10 +3106,9 @@ auth.onAuthStateChanged(async user => {
   // ── Reveal UI ─────────────────────────────────────────────────────────────
   _initializing = false;
   startSecondTimer();
-  updateAuthUI(user);
 
   if (startingOnQuiz) {
-    hideLoadingScreen(); // only needed for quiz startup path
+    hideLoadingScreen();
     showScreen('quiz');
     if (mode !== 'flash') render();
   } else if (startupHash === 'submit') {
@@ -3211,240 +3196,6 @@ function applyPreferences(prefs) {
 
   buildLessonRow();
   startSession();
-}
-
-// ── Auth UI helpers ───────────────────────────────────────────────────────────
-const GOOGLE_SVG = `<svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-  <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-  <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-  <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
-  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-</svg>`;
-
-function isGoogleUser(user) {
-  return !!(user && user.providerData && user.providerData.some(p => p.providerId === 'google.com'));
-}
-
-function updateAuthUI(user) {
-  const signinBtn  = document.getElementById('google-signin-btn');
-  const badge      = document.getElementById('user-badge');
-  const signinWrap = document.getElementById('signin-wrap');
-  const signinHint = document.getElementById('signin-hint');
-  const syncBtn    = document.getElementById('badge-refresh-btn');
-  const hmSyncBtn  = document.getElementById('heatmap-refresh-btn');
-  if (!signinBtn || !badge || !signinWrap) return;
-  if (!isGoogleUser(user)) {
-    badge.style.display = 'none';
-    if (syncBtn) syncBtn.style.display = 'none';
-    if (hmSyncBtn) hmSyncBtn.style.display = 'none';
-    signinWrap.style.display = 'flex';
-    signinBtn.style.display = '';
-    signinBtn.disabled = false;
-    signinBtn.innerHTML = GOOGLE_SVG + 'Sign in with Google';
-    if (signinHint) signinHint.style.display = 'flex';
-  } else {
-    signinWrap.style.display = 'none';
-    signinBtn.style.display = 'none';
-    badge.style.display = 'flex';
-    if (syncBtn) syncBtn.style.display = '';
-    if (hmSyncBtn) hmSyncBtn.style.display = '';
-    const googleData = user.providerData && user.providerData.find(p => p.providerId === 'google.com');
-    const displayName = (cachedGoogleProfile && cachedGoogleProfile.name)
-      || (googleData && googleData.displayName)
-      || user.displayName;
-    const photoURL = (cachedGoogleProfile && cachedGoogleProfile.picture)
-      || (googleData && googleData.photoURL)
-      || user.photoURL;
-    const firstName = (displayName || user.email || 'Signed in').split(' ')[0];
-    const nameEl = document.getElementById('user-display-name');
-    if (nameEl) nameEl.textContent = firstName;
-    const avatar = document.getElementById('user-avatar');
-    if (avatar) {
-      if (photoURL) { avatar.src = photoURL; avatar.style.display = ''; }
-      else { avatar.style.display = 'none'; }
-    }
-  }
-}
-
-// ── Google sign-in (popup) ────────────────────────────────────────────────────
-function signInWithGoogle() {
-  signingOut = false;
-  const btn = document.getElementById('google-signin-btn');
-  btn.disabled = true;
-  btn.textContent = 'Signing in…';
-
-  const currentUser = auth.currentUser;
-  const doSignIn = (user) => {
-    if (user && user.isAnonymous) {
-      return user.linkWithPopup(googleProvider);
-    }
-    return auth.signInWithPopup(googleProvider);
-  };
-
-  doSignIn(currentUser)
-    .then(async result => {
-      fbUser = result.user;
-      if (result.additionalUserInfo && result.additionalUserInfo.profile) {
-        cachedGoogleProfile = result.additionalUserInfo.profile;
-      }
-      // Ensure doc exists then write email (set+merge handles new and existing users)
-      if (fbUser.email) {
-        _cfWriteEmail({ email: fbUser.email }).catch(err => console.error("email write failed:", err.code, err.message));
-      }
-      // Create full user doc if it doesn't exist yet
-      try { await initUserDoc(fbUser); } catch(e) { console.error("initUserDoc:", e); }
-      startSecondTimer();
-      updateAuthUI(fbUser);
-    })
-    .catch(async err => {
-      if (err.code === 'auth/user-token-expired' || err.code === 'auth/invalid-user-token') {
-        // Stale anonymous session — sign out and do a fresh Google sign-in
-        try {
-          await auth.signOut();
-          const result = await auth.signInWithPopup(googleProvider);
-          fbUser = result.user;
-          updateAuthUI(fbUser);
-        } catch (innerErr) {
-          console.error("Sign-in after token expiry failed:", innerErr.code, innerErr.message);
-          updateAuthUI(auth.currentUser);
-        }
-      } else if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
-        // Computer #2 case: Google account exists elsewhere — merge anon data in, then delete anon
-        const anonUser = auth.currentUser;
-        const localStats = { ...wordStats };
-        const localSeconds = localUserSeconds;
-        try {
-          // Must delete/sign-out the anonymous user FIRST — otherwise signInWithCredential
-          // sees a current user and attempts linking again, causing the same error.
-          // suppressAnon prevents onAuthStateChanged from creating a new anon user during the gap.
-          suppressAnon = true;
-          const anonUid = anonUser && anonUser.isAnonymous ? anonUser.uid : null;
-          // Delete the anon Firestore doc FIRST, while the anon user is still
-          // authenticated — security rules allow this. After delete() is called
-          // the anon Auth session is gone and the delete would be rejected.
-          if (anonUid) {
-            await _cfDeleteAnonDocs({ anonUid }).catch(() => {});
-          }
-          if (anonUser && anonUser.isAnonymous) {
-            await anonUser.delete().catch(() => auth.signOut());
-          }
-          // Now no user is signed in — safe to sign in fresh as the Google user
-          const result = err.credential
-            ? await auth.signInWithCredential(err.credential)
-            : await auth.signInWithPopup(googleProvider);
-          suppressAnon = false;
-          fbUser = result.user;
-          initializedUid = fbUser.uid; // block onAuthStateChanged from re-running initUserDoc concurrently
-          const userRef = db.collection("userData").doc(fbUser.uid);
-
-          const snap = await userRef.get();
-          const saved = snap.exists ? snap.data() : {};
-          const savedStats = saved.wordStats || {};
-          for (const [word, stat] of Object.entries(localStats)) {
-            if (savedStats[word]) {
-              savedStats[word].seen += stat.seen;
-              savedStats[word].correct += stat.correct;
-              savedStats[word].lastSeen = Math.max(savedStats[word].lastSeen || 0, stat.lastSeen || 0);
-            } else {
-              savedStats[word] = stat;
-            }
-          }
-          wordStats = savedStats;
-          const savedSeconds = saved.userSeconds || parseHMS(saved.totalTime || "00:00:00");
-          localUserSeconds = savedSeconds + localSeconds;
-
-          // Merge activityDays
-          const savedDays = saved.activityDays || [];
-          activityDays.forEach(d => { if (!savedDays.includes(d)) savedDays.push(d); });
-
-          // Merge sessionHistory (keep last 50)
-          const savedSessions = saved.sessionHistory || [];
-          const mergedSessions = [...savedSessions, ...sessionHistory].slice(-50);
-
-          // Merge question counters
-          const savedQ = saved.totalQuestionsAnswered || 0;
-          const savedC = saved.totalCorrectAnswers || 0;
-
-          await _cfMergeAnonData({
-            wordStats:               wordStats,
-            localUserSeconds:        localUserSeconds,
-            totalTime:               fmtHMS(localUserSeconds),
-            activityDays:            savedDays,
-            mergedSessions:          mergedSessions,
-            totalQuestionsAnswered:  savedQ + sessionQuestionsAnswered,
-            totalCorrectAnswers:     savedC + sessionCorrectAnswers,
-            email:                   fbUser.email || null,
-            localSeconds:            localSeconds,
-            sessionQuestionsAnswered: sessionQuestionsAnswered,
-            sessionCorrectAnswers:   sessionCorrectAnswers
-          });
-          // Sync globals to the merged values — flushTime() and endSession() write
-          // from these, so they must reflect the full merged state, not just anon data.
-          activityDays = savedDays;
-          sessionHistory = mergedSessions;
-          startSecondTimer();
-          updateAuthUI(fbUser);
-        } catch (innerErr) {
-          suppressAnon = false; // ensure anon sign-in is never permanently blocked
-          console.warn("Merge error:", innerErr);
-          updateAuthUI(auth.currentUser);
-        }
-      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        console.error("Google sign-in error:", err.code, err.message);
-        const btn = document.getElementById('google-signin-btn');
-        btn.disabled = false;
-        document.getElementById('signin-hint').style.display = 'none';
-        if (err.code === 'auth/unauthorized-domain') {
-          btn.innerHTML = GOOGLE_SVG + 'Domain not authorized — see console';
-          console.error(
-            '%c Firebase Auth: Unauthorized Domain ',
-            'background:#c00;color:#fff;font-weight:bold;padding:2px 6px;border-radius:3px',
-            '\n\nYour site\'s domain is not in Firebase\'s authorized list.\n' +
-            'Fix: Firebase Console → Authentication → Settings → Authorized domains → Add your domain\n' +
-            '(e.g. yourusername.github.io)'
-          );
-        } else {
-          btn.innerHTML = GOOGLE_SVG + `Error: ${err.code}`;
-        }
-        setTimeout(() => updateAuthUI(auth.currentUser), 4000);
-      } else {
-        // User closed the popup — just reset the button
-        updateAuthUI(auth.currentUser);
-      }
-    });
-}
-
-async function signOutGoogle() {
-  signingOut = true;
-  stopTimers();
-  flushTime();
-  endSession();
-
-  // Reset all local state before the new anon session starts
-  fbUser = null;
-  initializedUid = null;
-  wordStats = {};
-  activityDays = [];
-  sessionHistory = [];
-  sessionStartTime = null;
-  sessionQuestionsAnswered = 0;
-  sessionCorrectAnswers = 0;
-  pendingAnswers = 0;
-  pendingCorrect = 0;
-  flushCount = 0;
-  cachedGoogleProfile = null;
-  updateAuthUI(null);
-
-  try {
-    await auth.signOut();
-  } catch (err) {
-    console.warn("Sign-out error:", err);
-  }
-
-  // Sign-out is complete — safe to create a fresh anonymous session.
-  // onAuthStateChanged will fire with the new anon user → initUserDoc → new Firestore doc.
-  signingOut = false;
-  auth.signInAnonymously().catch(err => console.warn("Post-logout anon auth error:", err));
 }
 
 // Parses "HH:MM:SS" back to total seconds for local tracking.
@@ -3959,7 +3710,7 @@ const _uiFns = {
   openHeatmap, closeHeatmap, toggleSettings, selectLesson, drillSelected,
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
-  manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay,
+  manualSync, jumpToLesson, smoothScrollOverlay,
   navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm
 };
 Object.assign(window, _uiFns);
