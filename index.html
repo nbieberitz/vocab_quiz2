@@ -2243,8 +2243,10 @@ function startSession(){
   _askedWords=[];_drillWords=null;
   _currentQuestionId=null;_currentQuestionData=null;
   _prefetchPromise=null;
-  _readyQuestion=null;      // clear startup prefetch — new session always fetches fresh
   _isLoadingQuestion=false; // reset in case a previous attempt left it stuck
+  // Note: _readyQuestion is intentionally NOT cleared here.
+  // loadQuizAndStart sets it just before calling startSession so the first question renders instantly.
+  // In all other cases (mode/lesson switches) it will already be null.
   adaptiveCount=0;adaptiveScore=0;adaptiveStreak=0;adaptiveBestStreak=0;
   adaptiveRecentWords=[];adaptiveNextReview=Math.floor(Math.random()*3)+4;
   render();
@@ -3054,53 +3056,61 @@ auth.onAuthStateChanged(async user => {
   initializedUid = user.uid;
   fbUser = user;
 
-  // ── Startup: fetch first question in parallel with initUserDoc ────────────
-  const prefetchMode = mode, prefetchLesson = selectedLesson;
-  const q1Promise = _cfGetQuestion({
-    mode: prefetchMode, lesson: prefetchLesson, dir,
-    hiddenWords: [], askedWords: [], recentWords: []
-  }).catch(() => null);
+  const startupHash = window.location.hash.replace('#', '');
+  const startingOnQuiz = startupHash.startsWith('quiz-');
 
-  try {
-    await initUserDoc(user); // applies preferences — may change mode/lesson
-  } catch (err) {
-    console.error("initUserDoc error:", err);
-  }
-
-  // If preferences changed mode/lesson the parallel fetch used wrong params — redo it
-  let q1 = await q1Promise;
-  if (!q1 || mode !== prefetchMode || selectedLesson !== prefetchLesson) {
-    q1 = await _cfGetQuestion({
-      mode, lesson: selectedLesson, dir,
-      hiddenWords: [...hiddenWords], askedWords: [], recentWords: []
+  if (startingOnQuiz) {
+    // ── Landing directly on a quiz — prefetch both questions before revealing UI ──
+    const prefetchMode = mode, prefetchLesson = selectedLesson;
+    const q1Promise = _cfGetQuestion({
+      mode: prefetchMode, lesson: prefetchLesson, dir,
+      hiddenWords: [], askedWords: [], recentWords: []
     }).catch(() => null);
+
+    try {
+      await initUserDoc(user);
+    } catch (err) {
+      console.error("initUserDoc error:", err);
+    }
+
+    let q1 = await q1Promise;
+    if (!q1 || mode !== prefetchMode || selectedLesson !== prefetchLesson) {
+      q1 = await _cfGetQuestion({
+        mode, lesson: selectedLesson, dir,
+        hiddenWords: [...hiddenWords], askedWords: [], recentWords: []
+      }).catch(() => null);
+    }
+
+    if (q1?.data && !q1.data.done) {
+      const word1 = q1.data.word;
+      _prefetchPromise = _cfGetQuestion({
+        mode, lesson: selectedLesson, dir,
+        hiddenWords: [...hiddenWords],
+        askedWords:  mode === 'quiz'     ? [word1] : [],
+        recentWords: mode === 'adaptive' ? [word1] : []
+      }).catch(() => null);
+      await _prefetchPromise;
+      _readyQuestion = q1;
+    }
+  } else {
+    // ── Landing on list or submit — just init user, no question prefetch ──────
+    try {
+      await initUserDoc(user);
+    } catch (err) {
+      console.error("initUserDoc error:", err);
+    }
   }
 
-  // ── Fetch question 2 and wait for it too ──────────────────────────────────
-  if (q1?.data && !q1.data.done) {
-    const word1 = q1.data.word;
-    _prefetchPromise = _cfGetQuestion({
-      mode, lesson: selectedLesson, dir,
-      hiddenWords: [...hiddenWords],
-      askedWords:  mode === 'quiz'     ? [word1] : [],
-      recentWords: mode === 'adaptive' ? [word1] : []
-    }).catch(() => null);
-    await _prefetchPromise; // wait — both questions ready before UI reveals
-    _readyQuestion = q1;    // loadNextQuestion uses this — no spinner on first question
-  }
-
-  // ── Everything ready — reveal UI ──────────────────────────────────────────
+  // ── Reveal UI ─────────────────────────────────────────────────────────────
   _initializing = false;
   startSecondTimer();
   updateAuthUI(user);
   hideLoadingScreen();
 
-  // Route to correct screen based on hash
-  const hash = window.location.hash.replace('#', '');
-  if (hash.startsWith('quiz-')) {
+  if (startingOnQuiz) {
     showScreen('quiz');
     if (mode !== 'flash') render();
-  } else if (hash === 'submit') {
+  } else if (startupHash === 'submit') {
     showScreen('submit');
   } else {
     showScreen('list');
@@ -3629,13 +3639,61 @@ function handleRoute() {
   if (hash.startsWith('quiz-')) {
     const wasAlreadyOnQuiz = _currentScreen === 'quiz';
     showScreen('quiz');
-    if (!wasAlreadyOnQuiz && !_initializing) startSession();
+    if (!wasAlreadyOnQuiz && !_initializing) {
+      loadQuizAndStart();
+    }
   } else if (hash === 'submit') {
     showScreen('submit');
   } else {
     showScreen('list');
     loadQuizList();
   }
+}
+
+// Shows a loading screen, prefetches both questions, then starts the quiz.
+// Called when navigating to a quiz from the list screen.
+async function loadQuizAndStart() {
+  // Show the full-screen loading overlay
+  const existingLoader = document.getElementById('loading-screen');
+  let loader = existingLoader;
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'loading-screen';
+    loader.innerHTML = '<div class="ld-spinner"></div><div class="ld-label">Preparing quiz…</div>';
+    document.body.appendChild(loader);
+  } else {
+    loader.classList.remove('fade-out');
+    loader.style.display = 'flex';
+  }
+
+  try {
+    // Fetch first question
+    const q1 = await _cfGetQuestion({
+      mode, lesson: selectedLesson, dir,
+      hiddenWords: [...hiddenWords], askedWords: [], recentWords: []
+    }).catch(() => null);
+
+    if (q1?.data && !q1.data.done) {
+      const word1 = q1.data.word;
+      _prefetchPromise = _cfGetQuestion({
+        mode, lesson: selectedLesson, dir,
+        hiddenWords: [...hiddenWords],
+        askedWords:  mode === 'quiz'     ? [word1] : [],
+        recentWords: mode === 'adaptive' ? [word1] : []
+      }).catch(() => null);
+      await _prefetchPromise;
+      _readyQuestion = q1;
+    }
+  } catch (err) {
+    console.error("Quiz load error:", err);
+  }
+
+  // Hide loading screen and start
+  loader.classList.add('fade-out');
+  setTimeout(() => {
+    if (loader.parentNode) loader.style.display = 'none';
+  }, 400);
+  startSession();
 }
 
 window.addEventListener('hashchange', () => {
@@ -3839,7 +3897,7 @@ const _uiFns = {
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
   manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay,
-  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm
+  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart
 };
 Object.assign(window, _uiFns);
 window.pick  = pick;
