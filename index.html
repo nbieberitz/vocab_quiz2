@@ -3388,7 +3388,8 @@ window.addEventListener("beforeunload", () => {
 // ── Hash routing ─────────────────────────────────────────────────────────────
 
 let _currentScreen = ''; // 'list' | 'quiz' | 'submit'
-let _pendingLeaveHash = null; // where we're trying to go when the warning shows
+let _pendingLeaveHash   = null;  // where we're trying to go when the warning shows
+let _bypassLeaveGuard  = false; // set by confirmLeave so hashchange doesn't re-intercept
 
 function navigate(hash) {
   window.location.hash = hash ? '#' + hash : '#';
@@ -3476,7 +3477,7 @@ async function loadQuizAndStart() {
 window.addEventListener('hashchange', () => {
   // Intercept navigation away from an active quiz
   const hash = window.location.hash.replace('#', '');
-  if (_currentScreen === 'quiz' && adaptiveCount + score > 0 && !hash.startsWith('quiz-')) {
+  if (!_bypassLeaveGuard && _currentScreen === 'quiz' && adaptiveCount + score > 0 && !hash.startsWith('quiz-')) {
     // User tried to navigate away mid-quiz — restore hash and show warning
     _pendingLeaveHash = hash;
     window.location.hash = 'quiz-' + (window.location.hash.includes('quiz-') ? window.location.hash.replace('#quiz-','') : 'vocab-150');
@@ -3497,7 +3498,9 @@ function confirmLeave() {
   document.getElementById('leave-modal').classList.remove('open');
   const dest = _pendingLeaveHash || '';
   _pendingLeaveHash = null;
+  _bypassLeaveGuard = true;
   navigate(dest); // triggers hashchange → handleRoute automatically
+  _bypassLeaveGuard = false;
 }
 
 // ── Quiz list screen ──────────────────────────────────────────────────────────
