@@ -1522,7 +1522,12 @@ kbd{
   <div class="list-wrap">
     <div class="list-header">
       <div class="list-title">VOCAB <em>QUIZZES</em></div>
-      <button class="rbtn" onclick="navigate('submit')">+ Submit New Quiz</button>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <span id="active-users-pill" style="display:none;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--correct);background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:20px;padding:3px 10px;white-space:nowrap;">
+          ● <span id="active-users-count">0</span> active
+        </span>
+        <button class="rbtn" onclick="navigate('submit')">+ Submit New Quiz</button>
+      </div>
     </div>
     <div id="quiz-cards">
       <div class="ld-wrap" style="min-height:120px"><div class="ld-spinner"></div></div>
@@ -3125,8 +3130,25 @@ auth.onAuthStateChanged(async user => {
   } else {
     showScreen('list');
     loadQuizList();
+    startActiveUsersListener();
   }
 });
+
+let _activeUsersUnsub = null;
+function startActiveUsersListener() {
+  if (_activeUsersUnsub) return; // already listening
+  _activeUsersUnsub = db.collection('stats').doc('activeUsers')
+    .onSnapshot(snap => {
+      if (!snap.exists) return;
+      const count = snap.data().count || 0;
+      const pill  = document.getElementById('active-users-pill');
+      const label = document.getElementById('active-users-count');
+      if (pill && label) {
+        label.textContent = count;
+        pill.style.display = count > 0 ? '' : 'none';
+      }
+    }, () => {}); // silently ignore permission errors
+}
 
 async function initUserDoc(user) {
   const result = await _cfInitUserDoc({
