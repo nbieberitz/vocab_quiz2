@@ -3713,7 +3713,11 @@ async function loadQuizAndStart() {
   setTimeout(() => {
     if (loader.parentNode) loader.style.display = 'none';
   }, 400);
+
+  // startSession clears _prefetchPromise — save and restore so q2 isn't lost
+  const savedPrefetch = _prefetchPromise;
   startSession();
+  _prefetchPromise = savedPrefetch;
 }
 
 window.addEventListener('hashchange', () => {
@@ -3740,8 +3744,7 @@ function confirmLeave() {
   document.getElementById('leave-modal').classList.remove('open');
   const dest = _pendingLeaveHash || '';
   _pendingLeaveHash = null;
-  navigate(dest);
-  handleRoute();
+  navigate(dest); // triggers hashchange → handleRoute automatically
 }
 
 // ── Quiz list screen ──────────────────────────────────────────────────────────
@@ -3888,14 +3891,6 @@ function toggleNameField(){
 }
 
 async function submitQuizForm() {
-  // Require Google sign-in — anonymous users can't submit
-  if (!fbUser || fbUser.isAnonymous) {
-    const statusEl = document.getElementById('submit-status');
-    statusEl.style.color = 'var(--wrong)';
-    statusEl.textContent = 'Please sign in with Google to submit a quiz.';
-    return;
-  }
-
   const notes     = document.getElementById('submission-notes').value.trim();
   const tagName   = document.getElementById('tag-name-checkbox').checked;
   const typedName = document.getElementById('submission-name')?.value.trim() || '';
