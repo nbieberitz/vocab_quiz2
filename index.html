@@ -1544,9 +1544,13 @@ kbd{
     <textarea class="form-textarea" id="submission-notes" placeholder="Describe what these words are for — class, chapter, topic, anything helpful…"></textarea>
 
     <label class="form-checkbox-row">
-      <input type="checkbox" id="tag-name-checkbox">
+      <input type="checkbox" id="tag-name-checkbox" onchange="toggleNameField()">
       <span class="form-checkbox-label">Tag my name on this public submission</span>
     </label>
+    <div id="name-field-wrap" style="display:none;margin-bottom:1.75rem;">
+      <label class="form-label" for="submission-name">Your name (required)</label>
+      <input type="text" id="submission-name" class="form-textarea" style="min-height:unset;height:42px;resize:none;" placeholder="Enter your name…">
+    </div>
 
     <div class="form-actions">
       <button class="form-cancel-btn" onclick="navigate('')">Cancel</button>
@@ -3644,6 +3648,10 @@ function showScreen(name) {
   document.getElementById('screen-submit').classList.toggle('active', name === 'submit');
   document.querySelector('.wrap').style.display = name === 'quiz' ? '' : 'none';
   _currentScreen = name;
+  if (name === 'submit') {
+    initUploadZoneIfNeeded();
+    resetSubmitForm();
+  }
 }
 
 function handleRoute() {
@@ -3794,12 +3802,21 @@ async function loadMySubmissions() {
 
 let _selectedFiles = [];
 
-(function initUploadZone() {
+// ── Submit form ───────────────────────────────────────────────────────────────
+
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE    = MAX_FILE_SIZE_MB * 1024 * 1024;
+let _selectedFiles     = [];
+let _uploadZoneInited  = false;
+
+function initUploadZoneIfNeeded() {
+  if (_uploadZoneInited) return;
+  _uploadZoneInited = true;
   const zone  = document.getElementById('upload-zone');
   const input = document.getElementById('image-input');
-
+  if (!zone || !input) return;
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-  zone.addEventListener('dragleave', ()=> zone.classList.remove('drag-over'));
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
   zone.addEventListener('drop', e => {
     e.preventDefault();
     zone.classList.remove('drag-over');
@@ -3809,12 +3826,37 @@ let _selectedFiles = [];
     addFiles(Array.from(input.files));
     input.value = '';
   });
-})();
+}
+
+function resetSubmitForm() {
+  _selectedFiles = [];
+  renderPreviews();
+  const notes = document.getElementById('submission-notes');
+  const name  = document.getElementById('submission-name');
+  const cb    = document.getElementById('tag-name-checkbox');
+  const wrap  = document.getElementById('name-field-wrap');
+  const status= document.getElementById('submit-status');
+  const btn   = document.getElementById('submit-btn');
+  if (notes)   notes.value   = '';
+  if (name)    name.value    = '';
+  if (cb)      cb.checked    = false;
+  if (wrap)    wrap.style.display = 'none';
+  if (status)  status.textContent = '';
+  if (btn)     btn.disabled  = false;
+}
 
 function addFiles(files) {
+  const statusEl = document.getElementById('submit-status');
+  const oversized = files.filter(f => f.size > MAX_FILE_SIZE);
+  if (oversized.length) {
+    statusEl.style.color = 'var(--wrong)';
+    statusEl.textContent = `${oversized.length} file(s) exceed ${MAX_FILE_SIZE_MB}MB and were skipped.`;
+  } else {
+    if (statusEl) statusEl.textContent = '';
+  }
+  const valid     = files.filter(f => f.type.startsWith('image/') && f.size <= MAX_FILE_SIZE);
   const remaining = 10 - _selectedFiles.length;
-  const toAdd = files.filter(f => f.type.startsWith('image/')).slice(0, remaining);
-  _selectedFiles = [..._selectedFiles, ...toAdd];
+  _selectedFiles  = [..._selectedFiles, ...valid.slice(0, remaining)];
   renderPreviews();
 }
 
@@ -3826,8 +3868,9 @@ function removeFile(idx) {
 function renderPreviews() {
   const container = document.getElementById('upload-previews');
   const label     = document.getElementById('upload-zone-label');
+  if (!container || !label) return;
   label.textContent = _selectedFiles.length === 0
-    ? 'Click or drag images here'
+    ? `Click or drag images here (max ${MAX_FILE_SIZE_MB}MB each)`
     : `${_selectedFiles.length}/10 image${_selectedFiles.length !== 1 ? 's' : ''} selected`;
   container.innerHTML = '';
   _selectedFiles.forEach((file, i) => {
@@ -3842,14 +3885,36 @@ function renderPreviews() {
   });
 }
 
+function toggleNameField(){
+  const checked = document.getElementById('tag-name-checkbox').checked;
+  document.getElementById('name-field-wrap').style.display = checked ? '' : 'none';
+  if(!checked) document.getElementById('submission-name').value = '';
+}
+
 async function submitQuizForm() {
-  const notes       = document.getElementById('submission-notes').value.trim();
-  const tagName     = document.getElementById('tag-name-checkbox').checked;
-  const btn         = document.getElementById('submit-btn');
-  const statusEl    = document.getElementById('submit-status');
-  const displayName = tagName && fbUser
-    ? (fbUser.displayName || fbUser.email || null)
-    : null;
+  // Require Google sign-in — anonymous users can't submit
+  if (!fbUser || fbUser.isAnonymous) {
+    const statusEl = document.getElementById('submit-status');
+    statusEl.style.color = 'var(--wrong)';
+    statusEl.textContent = 'Please sign in with Google to submit a quiz.';
+    return;
+  }
+
+  const notes     = document.getElementById('submission-notes').value.trim();
+  const tagName   = document.getElementById('tag-name-checkbox').checked;
+  const typedName = document.getElementById('submission-name')?.value.trim() || '';
+  const btn       = document.getElementById('submit-btn');
+  const statusEl  = document.getElementById('submit-status');
+
+  // If tagging name, require the name field
+  if (tagName && !typedName) {
+    statusEl.style.color = 'var(--wrong)';
+    statusEl.textContent = 'Please enter your name or uncheck the tag option.';
+    document.getElementById('submission-name').focus();
+    return;
+  }
+
+  const displayName = tagName ? typedName : null;
 
   if (_selectedFiles.length === 0 && !notes) {
     statusEl.style.color = 'var(--wrong)';
@@ -3859,38 +3924,33 @@ async function submitQuizForm() {
 
   btn.disabled = true;
   statusEl.style.color = 'var(--muted)';
-  statusEl.textContent = 'Uploading images…';
 
   try {
-    // Upload images to Firebase Storage
+    // Upload images one at a time with progress counter
     const uid       = fbUser.uid;
     const timestamp = Date.now();
-    const imagePaths = await Promise.all(
-      _selectedFiles.map(async (file, i) => {
-        const path = `submissions/${uid}/${timestamp}/${i}_${file.name}`;
-        const ref  = storageRef.ref(path);
-        await ref.put(file);
-        return path;
-      })
-    );
+    const imagePaths = [];
+    for (let i = 0; i < _selectedFiles.length; i++) {
+      statusEl.textContent = `Uploading image ${i + 1} of ${_selectedFiles.length}…`;
+      const file = _selectedFiles[i];
+      const path = `submissions/${uid}/${timestamp}/${i}_${file.name}`;
+      const ref  = firebase.storage().ref(path);
+      await ref.put(file);
+      imagePaths.push(path);
+    }
 
     statusEl.textContent = 'Submitting…';
     await _cfSubmitQuiz({ notes, imagePaths, displayName });
 
-    // Clear form
-    _selectedFiles = [];
-    renderPreviews();
-    document.getElementById('submission-notes').value = '';
-    document.getElementById('tag-name-checkbox').checked = false;
-
+    // Reset form
+    resetSubmitForm();
     statusEl.style.color = 'var(--correct)';
-    statusEl.textContent = 'Submitted! We\'ll review it soon.';
+    statusEl.textContent = "Submitted! We'll review it soon.";
     setTimeout(() => navigate(''), 2000);
   } catch (err) {
     console.error("Submission error:", err);
     statusEl.style.color = 'var(--wrong)';
     statusEl.textContent = 'Something went wrong — please try again.';
-  } finally {
     btn.disabled = false;
   }
 }
@@ -3909,7 +3969,7 @@ const _uiFns = {
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
   manualSync, signInWithGoogle, signOutGoogle, jumpToLesson, smoothScrollOverlay,
-  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart
+  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm
 };
 Object.assign(window, _uiFns);
 window.pick  = pick;
