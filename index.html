@@ -3224,36 +3224,11 @@ function parseHMS(str) {
   return (h||0)*3600 + (m||0)*60 + (s||0);
 }
 
-// Pulls latest data from Firestore and refreshes UI — called every 60s for multi-device sync.
+// syncFromFirestore — previously did a direct Firestore read every 60s for multi-device sync.
+// Removed: direct client reads are blocked by Firestore rules (all reads go through Cloud Functions).
+// initUserDoc loads all data at session start; flushUserData returns authoritative userSeconds.
 async function syncFromFirestore() {
-  if (!fbUser) return;
-  try {
-    const snap = await db.collection("userData").doc(fbUser.uid).get();
-    if (!snap.exists) return;
-    const data = snap.data();
-    // Merge remote wordStats — take the higher seen/correct count per word
-    const remote = data.wordStats || {};
-    for (const [word, stat] of Object.entries(remote)) {
-      if (!wordStats[word] || stat.seen > wordStats[word].seen) {
-        wordStats[word] = stat;
-      }
-    }
-    // Sync hidden words (union of local + remote)
-    const remoteHidden = data.hiddenWords || [];
-    remoteHidden.forEach(w => hiddenWords.add(w));
-    if(remoteHidden.length) localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
-    // Sync activity days (union of local + remote)
-    const remoteDays = data.activityDays || [];
-    remoteDays.forEach(d => { if (!activityDays.includes(d)) activityDays.push(d); });
-    // Sync time — take whichever is higher (userSeconds is source of truth; totalTime is display-only)
-    const remoteSeconds = data.userSeconds || parseHMS(data.totalTime || "00:00:00");
-    if (remoteSeconds > localUserSeconds) localUserSeconds = remoteSeconds;
-    // Refresh heatmap if it's open
-    const heatmapOpen = document.getElementById('heatmap-overlay').style.display === 'block';
-    if (heatmapOpen) openHeatmap();
-  } catch (err) {
-    console.warn("Sync error:", err);
-  }
+  return;
 }
 
 // Manual sync triggered by refresh buttons — shows brief spinning state.
