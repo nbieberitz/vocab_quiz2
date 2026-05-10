@@ -3056,6 +3056,16 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
+  // Validate the token is still live — if the user was deleted from Console,
+  // the cached token will fail refresh. Sign out and let the handler re-fire
+  // with null → creates a fresh anonymous session cleanly.
+  try {
+    await user.getIdToken(true);
+  } catch (e) {
+    await auth.signOut();
+    return;
+  }
+
   // If UID hasn't changed, skip re-initializing
   if (user.uid === initializedUid) {
     fbUser = user;
