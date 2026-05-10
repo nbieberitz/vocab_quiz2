@@ -3030,8 +3030,6 @@ const _cfGetMySubmissions= d => _callCF('getMySubmissions', d);
 // ── Server-side quiz grading — correct answer never touches the browser ───────
 const _cfGetQuestion     = d => _callCF('getQuestion', d);
 const _cfSubmitAnswer    = d => _callCF('submitAnswer', d);
-googleProvider.addScope('profile');
-googleProvider.addScope('email');
 
 function fmtHMS(s) {
   const h = Math.floor(s / 3600);
