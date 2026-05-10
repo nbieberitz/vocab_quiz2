@@ -1386,6 +1386,14 @@ kbd{
 }
 .status-badge.pending{background:rgba(245,166,35,0.12);color:var(--accent2);}
 .status-badge.published{background:rgba(0,229,160,0.12);color:var(--correct);}
+.submission-delete-btn{
+  background:none;border:1px solid rgba(255,92,122,0.25);border-radius:6px;
+  color:var(--wrong);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;
+  text-transform:uppercase;padding:3px 9px;cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s;flex-shrink:0;
+}
+.submission-delete-btn:hover{background:rgba(255,92,122,0.1);border-color:rgba(255,92,122,0.5);}
+.submission-delete-btn:disabled{opacity:0.4;cursor:default;}
 
 /* ── Submit form screen ── */
 .form-wrap{max-width:580px;margin:0 auto;}
@@ -3027,6 +3035,7 @@ const _cfSaveHidden      = d => _callCF('saveHidden', d);
 const _cfGetQuizList     = d => _callCF('getQuizList', d);
 const _cfSubmitQuiz      = d => _callCF('submitQuiz', d);
 const _cfGetMySubmissions= d => _callCF('getMySubmissions', d);
+const _cfDeleteSubmission = d => _callCF('deleteSubmission', d);
 // ── Server-side quiz grading — correct answer never touches the browser ───────
 const _cfGetQuestion     = d => _callCF('getQuestion', d);
 const _cfSubmitAnswer    = d => _callCF('submitAnswer', d);
@@ -3541,12 +3550,16 @@ async function loadMySubmissions() {
     list.innerHTML = submissions.map(s => {
       const date = s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : '';
       const notesPreview = s.notes ? s.notes.slice(0, 60) + (s.notes.length > 60 ? '…' : '') : '(no notes)';
+      const deleteBtn = s.status === 'pending'
+        ? `<button class="submission-delete-btn" onclick="deleteSubmission('${s.id}', this)">Delete</button>`
+        : '';
       return `
-        <div class="submission-card">
+        <div class="submission-card" id="submission-${s.id}">
           <div class="submission-info">
             <div class="submission-notes">${notesPreview}</div>
             <div>${s.imageCount} image${s.imageCount !== 1 ? 's' : ''} · ${date}</div>
           </div>
+          ${deleteBtn}
           <span class="status-badge ${s.status}">${s.status}</span>
         </div>
       `;
@@ -3556,7 +3569,25 @@ async function loadMySubmissions() {
   }
 }
 
-// ── Submit form ───────────────────────────────────────────────────────────────
+async function deleteSubmission(id, btn) {
+  if (!confirm('Delete this submission? This cannot be undone.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+  try {
+    await _cfDeleteSubmission({ submissionId: id });
+    const card = document.getElementById('submission-' + id);
+    if (card) card.remove();
+    // Hide section if no cards remain
+    const list = document.getElementById('my-submissions-list');
+    if (list && !list.querySelector('.submission-card')) {
+      document.getElementById('my-submissions-section').style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Delete failed:', err);
+    btn.disabled = false;
+    btn.textContent = 'Delete';
+  }
+}
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE    = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -3715,7 +3746,7 @@ const _uiFns = {
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
   manualSync, jumpToLesson, smoothScrollOverlay,
-  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm
+  navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm, deleteSubmission
 };
 Object.assign(window, _uiFns);
 window.pick  = pick;
