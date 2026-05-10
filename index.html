@@ -2067,7 +2067,19 @@ let pendingCorrect = 0;
 let flushCount = 0; // increments each flush; syncGlobalStats runs every 5th flush (5 min)
 let _prefetchPromise = null; // holds in-flight getQuestion call for instant next-question render
 let _readyQuestion   = null; // first question pre-loaded before UI shows — renders with no spinner
-let _initializing    = true; // true until both startup questions are ready; blocks loadNextQuestion
+let _initializing    = true; // true until auth + questions are ready; blocks loadNextQuestion
+
+// ── Show the right initial screen immediately, before auth fires ──────────────
+{
+  const _startHash = window.location.hash.replace('#','');
+  if(!_startHash.startsWith('quiz-')){
+    // List or submit screen — hide loading overlay immediately, show list right away
+    const _ls = document.getElementById('loading-screen');
+    if(_ls) _ls.style.display = 'none';
+    document.getElementById('screen-list').classList.add('active');
+    _initializing = false; // list screen doesn't need to block on question fetching
+  }
+}
 
 function hideLoadingScreen(){
   const el=document.getElementById('loading-screen');
@@ -3105,9 +3117,9 @@ auth.onAuthStateChanged(async user => {
   _initializing = false;
   startSecondTimer();
   updateAuthUI(user);
-  hideLoadingScreen();
 
   if (startingOnQuiz) {
+    hideLoadingScreen(); // only needed for quiz startup path
     showScreen('quiz');
     if (mode !== 'flash') render();
   } else if (startupHash === 'submit') {
