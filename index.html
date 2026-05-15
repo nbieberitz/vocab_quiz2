@@ -1905,7 +1905,7 @@ let _drillWords          = null; // null = normal pool; string[] = restricted dr
 let _isLoadingQuestion   = false;
 
 /* ── Spam protection ─────────────────────────────────────────────────────── */
-const DEBUG_DISABLE_SPAM = true; // set true to bypass rate limiter during testing
+const DEBUG_DISABLE_SPAM = false; // set true to bypass rate limiter during testing
 const SPAM_WINDOW_MS   = 10000; // rolling window to measure speed
 const SPAM_THRESHOLD   = 10;    // actions within that window = spam
 const SPAM_COOLDOWN_MS = 3000;  // how long the next-btn stays locked after warning
@@ -2280,7 +2280,7 @@ function startSession(){
 
 function render(){
   const app=document.getElementById('app');
-  if(mode==='flash'){renderFlash(app);return;}
+  if(mode==='flash'){renderFlash(app);_fireFlashToken();return;}
   loadNextQuestion();
 }
 
@@ -2642,6 +2642,17 @@ function retakeWrong(){
 
 function flashAssess(knew){
   trackAnswer(knew);
+  // Submit to server so wordStats get updated in Firestore
+  if(_currentQuestionId){
+    _cfSubmitAnswer({
+      questionId: _currentQuestionId,
+      chosen: knew ? '__FLASH_CORRECT__' : '__FLASH_WRONG__',
+      flashSelfAssess: true,
+      isCorrect: knew
+    }).catch(() => {});
+    _currentQuestionId = null;
+    _currentQuestionData = null;
+  }
   flashNav(1);
 }
 
@@ -2725,7 +2736,25 @@ function flipCard(){
 function flashNav(d){
   flashIdx=(flashIdx+d+pool.length)%pool.length;
   flashState=0;
+  _currentQuestionId=null;
+  _currentQuestionData=null;
   renderFlash(document.getElementById('app'));
+  // Silently get a signed token for this card so flashAssess can submit to server
+  _fireFlashToken();
+}
+
+function _fireFlashToken(){
+  if(!pool.length) return;
+  const item = pool[flashIdx];
+  _cfGetQuestion({
+    mode:'flash', lesson: item.l, dir, hiddenWords:[...hiddenWords],
+    askedWords:[], recentWords:[], drillWord: item.w
+  }).then(res => {
+    if(res && res.data && !res.data.done){
+      _currentQuestionId   = res.data.questionId;
+      _currentQuestionData = res.data;
+    }
+  }).catch(()=>{});
 }
 
 function toggleFlashShuffle(){
