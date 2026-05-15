@@ -1905,7 +1905,7 @@ let _drillWords          = null; // null = normal pool; string[] = restricted dr
 let _isLoadingQuestion   = false;
 
 /* ── Spam protection ─────────────────────────────────────────────────────── */
-const DEBUG_DISABLE_SPAM = false; // set true to bypass rate limiter during testing
+const DEBUG_DISABLE_SPAM = true; // set true to bypass rate limiter during testing
 const SPAM_WINDOW_MS   = 10000; // rolling window to measure speed
 const SPAM_THRESHOLD   = 10;    // actions within that window = spam
 const SPAM_COOLDOWN_MS = 3000;  // how long the next-btn stays locked after warning
