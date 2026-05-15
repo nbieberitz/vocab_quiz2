@@ -2280,7 +2280,7 @@ function startSession(){
 
 function render(){
   const app=document.getElementById('app');
-  if(mode==='flash'){renderFlash(app);_fireFlashToken();return;}
+  if(mode==='flash'){renderFlash(app);return;}
   loadNextQuestion();
 }
 
@@ -2717,6 +2717,8 @@ function renderFlash(app){
 function flipCard(){
   const card = document.querySelector('.flash-card');
   if (!card || card.classList.contains('flip-exit')) return;
+  // Fire token fetch on flip so assess buttons have a signed token ready
+  if(flashState === 0) _fireFlashToken();
   card.classList.add('flip-exit');
   setTimeout(() => {
     flashState = (flashState + 1) % 2;
@@ -2739,8 +2741,6 @@ function flashNav(d){
   _currentQuestionId=null;
   _currentQuestionData=null;
   renderFlash(document.getElementById('app'));
-  // Silently get a signed token for this card so flashAssess can submit to server
-  _fireFlashToken();
 }
 
 function _fireFlashToken(){
