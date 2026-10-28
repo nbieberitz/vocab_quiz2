@@ -1551,7 +1551,7 @@ kbd{
     </div>
 
     <label class="form-label" for="submission-notes">Notes</label>
-    <textarea class="form-textarea" id="submission-notes" placeholder="Describe what these words are for — class, chapter, topic, anything helpful…"></textarea>
+    <textarea class="form-textarea" id="submission-notes" maxlength="2000" placeholder="Describe what these words are for — class, chapter, topic, anything helpful…"></textarea>
 
     <label class="form-checkbox-row">
       <input type="checkbox" id="tag-name-checkbox" onchange="toggleNameField()">
@@ -1559,7 +1559,7 @@ kbd{
     </label>
     <div id="name-field-wrap" style="display:none;margin-bottom:1.75rem;">
       <label class="form-label" for="submission-name">Your name (required)</label>
-      <input type="text" id="submission-name" class="form-textarea" style="min-height:unset;height:42px;resize:none;" placeholder="Enter your name…">
+      <input type="text" id="submission-name" maxlength="40" class="form-textarea" style="min-height:unset;height:42px;resize:none;" placeholder="Enter your name…">
     </div>
 
     <div class="form-actions">
@@ -1578,7 +1578,7 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v3.1.3</span>
+      <span class="version-tag">v3.1.4</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1709,7 +1709,7 @@ kbd{
   <div style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border2);text-align:center;">
     <p style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.07em;color:var(--text);opacity:0.55;line-height:2;">
       Have a problem, suggestion, or spot a mistake in a word or definition?<br>
-      Contact <a href="https://mail.google.com/mail/?view=cm&to=bieberna27@collegedaleacademy.com" target="_blank" style="color:var(--accent);text-decoration:none;opacity:1;transition:opacity .15s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">bieberna27@collegedaleacademy.com</a>
+      Contact <a href="https://mail.google.com/mail/?view=cm&to=bieberna27@collegedaleacademy.com" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none;opacity:1;transition:opacity .15s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">bieberna27@collegedaleacademy.com</a>
       <span style="display:block;margin-top:5px;font-size:10px;opacity:0.6;letter-spacing:0.06em;">All feedback is welcome and will be looked into.</span>
     </p>
   </div>
@@ -1897,6 +1897,7 @@ const ALL=[
 ];
 
 const LETTERS=['A','B','C','D'];
+const reEsc=v=>String(v).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
 
@@ -1983,6 +1984,12 @@ function saveHidden(){
   if(fbUser){
     _cfSaveHidden({ hiddenWords: [...hiddenWords] }).catch(()=>{});
   }
+}
+
+function restoreWord(word){
+  hiddenWords.delete(word);
+  saveHidden();
+  openGlossary();
 }
 
 function toggleWordSelect(word){
@@ -2297,8 +2304,8 @@ async function loadNextQuestion(){
 function renderQuestionFromServer(app,q){
   const isDefToWord=q.direction==='def-to-word';
   const prompt=isDefToWord
-    ?`<div class="question">${q.dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${q.promptText}</div>`
-    :`<div class="question">${q.dirLabel}</div><div class="question-word">${q.promptText}</div>`;
+    ?`<div class="question">${esc(q.dirLabel)}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${esc(q.promptText)}</div>`
+    :`<div class="question">${esc(q.dirLabel)}</div><div class="question-word">${esc(q.promptText)}</div>`;
   const optsHtml=q.optionLabels.map((label,i)=>
     `<button class="opt" id="opt-${i}" onclick="pick(${i})"><span class="opt-letter">${LETTERS[i]}</span>${esc(label)}</button>`
   ).join('');
@@ -2317,7 +2324,7 @@ function renderQuestionFromServer(app,q){
       </div>
       <div class="quiz-layout">
         <div class="quiz-left qcard">
-          <div class="lesson-tag" style="display:flex;align-items:center;gap:8px">${q.lessonName} ${wordBadge}</div>
+          <div class="lesson-tag" style="display:flex;align-items:center;gap:8px">${esc(q.lessonName)} ${wordBadge}</div>
           ${prompt}
         </div>
         <div class="quiz-right">
@@ -2340,7 +2347,7 @@ function renderQuestionFromServer(app,q){
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="quiz-layout">
         <div class="quiz-left qcard">
-          <div class="lesson-tag">${q.lessonName}</div>
+          <div class="lesson-tag">${esc(q.lessonName)}</div>
           ${prompt}
         </div>
         <div class="quiz-right">
@@ -2449,7 +2456,7 @@ async function pick(idx,chosen){
         if(!result.isCorrect&&result.siblings&&confusedWord&&result.siblings.includes(confusedWord)){
           const tip=document.createElement('div');
           tip.className='confusion-tip';
-          tip.innerHTML=`⚠️ <strong>${result.word}</strong> and <strong>${confusedWord}</strong> are commonly confused — review both in <a href="#" onclick="event.stopPropagation();openGlossary();return false;">All Words</a>.`;
+          tip.innerHTML=`⚠️ <strong>${esc(result.word)}</strong> and <strong>${esc(confusedWord)}</strong> are commonly confused — review both in <a href="#" onclick="event.stopPropagation();openGlossary();return false;">All Words</a>.`;
           els[i].appendChild(tip);
         }
       } else if(i===idx&&!result.isCorrect){
@@ -2496,7 +2503,7 @@ function _attachExampleBtn(el,result){
     const panel=document.createElement('div');
     panel.className='example-panel';
     const sentence=result.example||'No example available for this word.';
-    const highlighted=sentence.replace(new RegExp(`\\b(${result.word}\\w*)`,'gi'),'<em>$1</em>');
+    const highlighted=esc(sentence).replace(new RegExp('\b('+reEsc(result.word)+'\w*)','gi'),'<em>$1</em>');
     panel.innerHTML=`<div class="ex-sentence">${highlighted}</div>`;
     wrap.appendChild(panel);
   };
@@ -2523,11 +2530,11 @@ function _attachRevealBtn(el,chosen,isDefToWord){
     if(isDefToWord){
       const found=ALL.find(x=>x.w===chosen);
       const def=found?found.d:'No definition found.';
-      panel.innerHTML=`<div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong);margin-bottom:4px">${chosen}</div><div class="ex-sentence">${def}</div>`;
+      panel.innerHTML=`<div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong);margin-bottom:4px">${esc(chosen)}</div><div class="ex-sentence">${esc(def)}</div>`;
     } else {
       const found=ALL.find(x=>x.d===chosen);
       const word=found?found.w:'Unknown';
-      panel.innerHTML=`<div class="ex-sentence" style="font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">This definition belongs to:</div><div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong)">${word}</div>`;
+      panel.innerHTML=`<div class="ex-sentence" style="font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">This definition belongs to:</div><div class="ex-sentence" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.04em;color:var(--wrong)">${esc(word)}</div>`;
     }
     revWrap.appendChild(panel);
   };
@@ -2554,7 +2561,7 @@ function renderResult(app){
   const msg=pct>=90?'Excellent work. You know this material.':pct>=70?'Good result. Brush up on the words below and you\'ll be ready.':pct>=50?'A decent start. Go through the words below and run the quiz again to reinforce them.':'More review needed. Work through the list below, then retake the quiz.';
   const rev=wrong.length?`<div class="review-section">
     <div class="review-header">Study these ${wrong.length} word${wrong.length>1?'s':''} before your final</div>
-    ${wrong.map(w=>`<div class="review-item"><div class="review-word">${w.w}</div><div class="review-def">${w.d}</div></div>`).join('')}
+    ${wrong.map(w=>`<div class="review-item"><div class="review-word">${esc(w.w)}</div><div class="review-def">${esc(w.d)}</div></div>`).join('')}
   </div>`:`<div style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--correct);margin-top:1rem">Perfect score — nothing to review.</div>`;
   app.innerHTML=`<div class="qcard result">
     <div class="big-score">${score}/${total}</div>
@@ -2732,11 +2739,11 @@ function openGlossary(){
       const s=wordStats[w.w];
       let badge='';
       if(isHidden){
-        badge=`<span class="hidden-badge" onclick="event.stopPropagation();hiddenWords.delete('${w.w}');saveHidden();openGlossary();" title="Click to restore">🚫 Hidden from quiz</span>`;
+        badge=`<span class="hidden-badge" onclick="event.stopPropagation();restoreWord('${w.w}');" title="Click to restore">🚫 Hidden from quiz</span>`;
       } else if(s && s.seen>0){
         const pct=Math.round(s.correct/s.seen*100);
         const bg=pct>=90?'var(--hm-great)':pct>=75?'var(--hm-good)':pct>=50?'var(--hm-mid)':'var(--hm-low)';
-        badge=`<span class="glossary-acc-badge" style="background:${bg}">${pct}% · ${s.seen} seen</span>`;
+        badge=`<span class="glossary-acc-badge" style="background:${bg}">${pct}% · ${esc(s.seen)} seen</span>`;
       } else {
         badge=`<span class="glossary-acc-badge" style="background:var(--hm-unseen);opacity:0.6">Not yet seen</span>`;
       }
@@ -2750,7 +2757,7 @@ function openGlossary(){
       if(s && s.confusedWith){
         const pairs=Object.entries(s.confusedWith).sort((a,b)=>b[1]-a[1]).slice(0,2);
         if(pairs.length){
-          confused=`<div class="glossary-confused">⚡ Often confused with: ${pairs.map(([cw,n])=>`<strong>${cw}</strong> (${n}×)`).join(', ')}</div>`;
+          confused=`<div class="glossary-confused">⚡ Often confused with: ${pairs.map(([cw,n])=>`<strong>${esc(cw)}</strong> (${esc(n)}×)`).join(', ')}</div>`;
         }
       }
       // Curated confusion note (global — shown for all students)
@@ -2942,7 +2949,7 @@ function openHeatmap() {
 
       const tip = document.createElement('div');
       tip.className = 'heatmap-cell-tooltip';
-      tip.innerHTML = `<strong>${item.w}</strong><br>${isHidden ? '🚫 Hidden from quiz' : stats.seen === 0 ? 'Not yet seen' : `${pct}% correct (${stats.correct}/${stats.seen})`}`;
+      tip.innerHTML = `<strong>${item.w}</strong><br>${isHidden ? '🚫 Hidden from quiz' : stats.seen === 0 ? 'Not yet seen' : `${pct}% correct (${esc(stats.correct)}/${esc(stats.seen)})`}`;
 
       if(isHidden){
         const hiddenIcon = document.createElement('div');
@@ -3685,7 +3692,7 @@ const _uiFns = {
   openHeatmap, closeHeatmap, toggleSettings, selectLesson, drillSelected,
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
-  jumpToLesson, smoothScrollOverlay,
+  jumpToLesson, smoothScrollOverlay, loadNextQuestion, restoreWord,
   navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm, deleteSubmission
 };
 Object.assign(window, _uiFns);
