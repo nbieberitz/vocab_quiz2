@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://us-central1-vocab-tool-testing.cloudfunctions.net" crossorigin>
 <title>Vocab Quiz</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
 :root{
   --bg:#05080f;
@@ -1497,6 +1495,10 @@ kbd{
   font-size:12px;opacity:0.5;
 }
 #loading-screen.fade-out{opacity:0;pointer-events:none;}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .ld-spinner{animation-duration:.7s!important;animation-iteration-count:infinite!important}
+}
 </style>
 </head>
 <body>
@@ -1576,7 +1578,7 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v3.1.2</span>
+      <span class="version-tag">v3.1.3</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1712,6 +1714,8 @@ kbd{
     </p>
   </div>
 </div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 (function(){
 const LESSON_NAMES={1:'Language',2:'Possibility',3:'Change',4:'Mind & Knowledge',5:'Avoidance',6:'Sequence',7:'Criticism',8:'Responsibility',9:'Behavior',10:'Skill',11:'Commands',12:'Size',13:'Imitation',14:'Pairs',15:'Reversal'};
@@ -1893,6 +1897,7 @@ const ALL=[
 ];
 
 const LETTERS=['A','B','C','D'];
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let mode='quiz',dir='word',quizOrder='random',selectedLesson='all',pool=[],orderedPool=[],queue=[],current=0,score=0,answered=false,wrong=[],flashIdx=0,flashState=0,flashShuffled=false;
 
 // ── Server-side quiz state ────────────────────────────────────────────────────
@@ -1971,7 +1976,7 @@ let wordStats = {}; // { word: { seen: N, correct: N, lastSeen: timestamp } } �
 
 // ─── Word selection & hidden words ───────────────────────────────────────────
 let selectedWords = new Set();
-let hiddenWords   = new Set(JSON.parse(localStorage.getItem('vocab_hidden')||'[]'));
+let hiddenWords = new Set((()=>{try{return JSON.parse(localStorage.getItem('vocab_hidden')||'[]')}catch(e){return []}})());
 
 function saveHidden(){
   localStorage.setItem('vocab_hidden', JSON.stringify([...hiddenWords]));
@@ -2027,7 +2032,7 @@ function drillSelected(){
   document.getElementById('dir-row').style.display='flex';
   document.getElementById('order-row').style.display='flex';
   document.getElementById('lesson-row').style.display='flex';
-  _drillWords=words;
+  _drillWords=words;_prefetchPromise=null;
   score=0;answered=false;wrong=[];_askedWords=[];
   _currentQuestionId=null;_currentQuestionData=null;
   loadNextQuestion();
@@ -2178,75 +2183,6 @@ function getPool(){
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-// Returns `count` plausible distractors for a given item.
-// Priority: (1) curated confusion-pair words — students need to learn to tell these apart.
-// (2) same-lesson words for thematic relevance. (3) random fill.
-// Confusion history and definition overlap are intentionally excluded here —
-// those signals drive *which word gets asked*, not *how hard the wrong answers are*.
-function smartDistractors(item, count) {
-  // Pull in any words this item is known to be confused with — high priority
-  const confusedPairs=(CONFUSED_MAP[item.w]||[])
-    .map(cw=>ALL.find(x=>x.w===cw))
-    .filter(Boolean);
-  const confusedSet=new Set(confusedPairs.map(x=>x.w));
-
-  const sameLesson=shuffle(ALL.filter(x=>x.w!==item.w && x.l===item.l && !confusedSet.has(x.w)));
-  const otherWords=shuffle(ALL.filter(x=>x.w!==item.w && x.l!==item.l && !confusedSet.has(x.w)));
-
-  // Confused pairs first, then same-lesson, then random fill
-  const pool=[...shuffle(confusedPairs),...sameLesson,...otherWords.slice(0,count*3)];
-  return pool.slice(0,count);
-}
-
-function nextAdaptiveWord(){
-  // Every adaptiveNextReview questions, insert a high-accuracy review word
-  const isReviewSlot = adaptiveCount > 0 && adaptiveCount % adaptiveNextReview === 0;
-  if(isReviewSlot){
-    adaptiveNextReview = Math.floor(Math.random()*3)+4;
-    const reviewPool = ALL.filter(w=>{
-      if(adaptiveRecentWords.includes(w.w)) return false;
-      const s = wordStats[w.w];
-      return s && s.seen >= 2 && (s.correct/s.seen) >= 0.75;
-    });
-    if(reviewPool.length > 0) return reviewPool[Math.floor(Math.random()*reviewPool.length)];
-  }
-
-  // Build weighted pool — exclude last 12 words to spread selection out
-  const candidates = ALL.filter(item => !adaptiveRecentWords.includes(item.w));
-  const weights = candidates.map(item => {
-    const s = wordStats[item.w];
-    if(!s || s.seen === 0) return 3;      // unseen
-    const p = s.correct / s.seen;
-    let w;
-    if(p < 0.5)  w = 4;               // struggling — moderately prioritized
-    else if(p < 0.75) w = 2.5;        // needs work
-    else if(p < 0.9)  w = 1;          // decent
-    else w = 0.4;                      // mastered — still appears occasionally
-    // Confusion boost: if this word has been repeatedly confused with other words,
-    // it clearly needs more drilling — push its weight up proportionally.
-    if(s.confusedWith){
-      const totalConfusions = Object.values(s.confusedWith).reduce((a,b)=>a+b, 0);
-      if(totalConfusions > 0) w *= (1 + Math.min(totalConfusions * 0.25, 2)); // cap at 3× boost
-    }
-    // Recency boost: words not seen in a while get higher priority
-    if (s.lastSeen) {
-      const daysSince = (Date.now() - s.lastSeen) / 86400000;
-      if (daysSince > 7)  w *= 2.0;   // unseen for a week — strong boost
-      else if (daysSince > 3) w *= 1.5; // a few days — moderate boost
-    }
-    return w;
-  });
-
-  // Proper weighted random — no array slot inflation
-  const total = weights.reduce((a,b) => a+b, 0);
-  let rand = Math.random() * total;
-  for(let i = 0; i < candidates.length; i++){
-    rand -= weights[i];
-    if(rand <= 0) return candidates[i];
-  }
-  return candidates[candidates.length-1];
-}
-
 function setMode(m){
   mode=m;
   document.getElementById('mode-quiz').className='mode-btn'+(m==='quiz'?' active':'');
@@ -2304,6 +2240,7 @@ function _firePrefetch(){
 
 async function loadNextQuestion(){
   if(_initializing) return; // startup not done — loading screen is up
+  if(!window.location.hash.startsWith('#quiz-')) return; // no question fetches on list/submit screens
   if(_isLoadingQuestion) return;
   _isLoadingQuestion=true;
   answered=false;
@@ -2362,10 +2299,9 @@ function renderQuestionFromServer(app,q){
   const prompt=isDefToWord
     ?`<div class="question">${q.dirLabel}</div><div class="question-word" style="font-size:clamp(1rem,3vw,1.25rem);font-family:'DM Sans',sans-serif;font-weight:300;line-height:1.7;letter-spacing:normal;color:var(--text);opacity:0.9">${q.promptText}</div>`
     :`<div class="question">${q.dirLabel}</div><div class="question-word">${q.promptText}</div>`;
-  const optsHtml=q.optionLabels.map((label,i)=>{
-    const safe=label.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<button class="opt" id="opt-${i}" onclick="pick(${i},'${safe}')"><span class="opt-letter">${LETTERS[i]}</span>${label}</button>`;
-  }).join('');
+  const optsHtml=q.optionLabels.map((label,i)=>
+    `<button class="opt" id="opt-${i}" onclick="pick(${i})"><span class="opt-letter">${LETTERS[i]}</span>${esc(label)}</button>`
+  ).join('');
   if(mode==='adaptive'){
     const accuracy=adaptiveCount>0?Math.round(adaptiveScore/adaptiveCount*100):0;
     const ws=q.wordHistory;
@@ -2426,6 +2362,7 @@ async function pick(idx,chosen){
   if(answered)return;
   if(_spamCheck())return;
   if(!_currentQuestionId)return;
+  if(idx>=0&&_currentQuestionData&&_currentQuestionData.optionLabels) chosen=_currentQuestionData.optionLabels[idx];
   answered=true;
 
   // Disable all options immediately for responsiveness
@@ -2634,7 +2571,7 @@ function renderResult(app){
 
 function retakeWrong(){
   if(!wrong.length) return;
-  _drillWords=wrong.map(w=>w.w);
+  _drillWords=wrong.map(w=>w.w);_prefetchPromise=null;
   score=0;answered=false;wrong=[];_askedWords=[];
   _currentQuestionId=null;_currentQuestionData=null;
   loadNextQuestion();
@@ -2772,14 +2709,12 @@ function toggleFlashShuffle(){
   renderFlash(document.getElementById('app'));
 }
 
-function setTheme(t){
+function setTheme(t, silent){
   document.body.classList.toggle('light', t==='light');
   localStorage.setItem('vocab_theme', t);
   document.getElementById('theme-icon').textContent = t==='light' ? '☀️' : '🌙';
-  savePreferences();
+  if(!silent) savePreferences();
 }
-
-let glossaryObserver=null;
 
 function openGlossary(){
   const overlay=document.getElementById('glossary-overlay');
@@ -2847,18 +2782,6 @@ function openGlossary(){
   overlay.scrollTop=0;
   document.body.style.overflow='hidden';
 
-  if(glossaryObserver) glossaryObserver.disconnect();
-  glossaryObserver=new IntersectionObserver((entries)=>{
-    let best=null,bestTop=Infinity;
-    entries.forEach(e=>{
-      if(e.isIntersecting){
-        const top=e.boundingClientRect.top;
-        if(top<bestTop){bestTop=top;best=e.target;}
-      }
-    });
-  },{root:overlay,threshold:0.15});
-
-  document.querySelectorAll('.glossary-lesson').forEach(el=>glossaryObserver.observe(el));
 }
 
 function smoothScrollOverlay(overlay, toY, duration){
@@ -2898,7 +2821,6 @@ function jumpToLesson(num){
 function closeGlossary(){
   document.getElementById('glossary-overlay').classList.remove('open');
   document.body.style.overflow='';
-  if(glossaryObserver){glossaryObserver.disconnect();glossaryObserver=null;}
 }
 
 // ─── Firebase Tracking ───────────────────────────────────────────────────────
@@ -2911,9 +2833,19 @@ const firebaseConfig = {
   appId: "1:604425746281:web:6fa5ff08327002bbfaeff8"
 };
 firebase.initializeApp(firebaseConfig);
-const auth            = firebase.auth();
-const db              = firebase.firestore();
-const storageRef      = firebase.storage();
+const auth = firebase.auth();
+// Storage SDK is only needed on the submit screen, so it loads on demand.
+let _storageReady = null;
+function _loadStorageSdk(){
+  if(!_storageReady) _storageReady = new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js';
+    sc.onload = ok;
+    sc.onerror = () => { _storageReady = null; fail(new Error('Could not load upload library')); };
+    document.head.appendChild(sc);
+  });
+  return _storageReady;
+}
 
 selectLesson('adaptive');
 setTheme(localStorage.getItem('vocab_theme')||'dark');
@@ -2923,9 +2855,17 @@ if(localStorage.getItem('vocab_settings_collapsed')==='1'){
 }
 
 document.addEventListener('keydown', e => {
-
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const _t = e.target;
+  if (_t && (_t.tagName === 'INPUT' || _t.tagName === 'TEXTAREA' || _t.isContentEditable)) return;
+  if (_currentScreen !== 'quiz') return;
+  if (document.getElementById('leave-modal').classList.contains('open')) return;
   if (document.getElementById('heatmap-overlay').style.display === 'block') {
     if (e.key === 'Escape') closeHeatmap();
+    return;
+  }
+  if (document.getElementById('glossary-overlay').classList.contains('open')) {
+    if (e.key === 'Escape') closeGlossary();
     return;
   }
   const key = e.key.toUpperCase();
@@ -3034,33 +2974,41 @@ function closeHeatmap() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Cloud Function callables — all Firestore writes go through here ───────────
-async function _callCF(name, data) {
+async function _callCF(name, data, keepalive) {
   const user  = auth.currentUser;
   const token = user ? await user.getIdToken() : null;
-  const res   = await fetch(
-    `https://us-central1-vocab-tool-testing.cloudfunctions.net/${name}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({ data })
+  const ctrl  = keepalive ? null : new AbortController();
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 20000) : null; // never leave the UI waiting forever
+  try {
+    const res = await fetch(
+      `https://us-central1-vocab-tool-testing.cloudfunctions.net/${name}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ data }),
+        keepalive: !!keepalive,   // lets the final flush finish while the tab closes
+        signal: ctrl ? ctrl.signal : undefined
+      }
+    );
+    const json = await res.json();
+    if (json.error) {
+      const err = new Error(json.error.message || 'Cloud Function error');
+      err.code = json.error.status || 'internal';
+      throw err;
     }
-  );
-  const json = await res.json();
-  if (json.error) {
-    const err = new Error(json.error.message || 'Cloud Function error');
-    err.code = json.error.status || 'internal';
-    throw err;
+    return { data: json.result };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-  return { data: json.result };
 }
 
 const _cfInitUserDoc     = d => _callCF('initUserDoc', d);
-const _cfFlushUserData   = d => _callCF('flushUserData', d);
+const _cfFlushUserData = (d, k) => _callCF('flushUserData', d, k);
 const _cfSyncGlobalStats = d => _callCF('syncGlobalStats', d);
-const _cfEndSession      = d => _callCF('endSession', d);
+const _cfEndSession = d => _callCF('endSession', d, true);
 const _cfSavePreferences = d => _callCF('savePreferences', d);
 const _cfSaveHidden      = d => _callCF('saveHidden', d);
 const _cfGetQuizList     = d => _callCF('getQuizList', d);
@@ -3070,13 +3018,6 @@ const _cfDeleteSubmission = d => _callCF('deleteSubmission', d);
 // ── Server-side quiz grading — correct answer never touches the browser ───────
 const _cfGetQuestion     = d => _callCF('getQuestion', d);
 const _cfSubmitAnswer    = d => _callCF('submitAnswer', d);
-
-function fmtHMS(s) {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
-}
 
 // ── Auth state listener — handles both anon and Google users ──────────────────
 let initializedUid = null;
@@ -3155,6 +3096,7 @@ auth.onAuthStateChanged(async user => {
 
   // ── Reveal UI ─────────────────────────────────────────────────────────────
   _initializing = false;
+  if (!sessionStartTime) sessionStartTime = Date.now(); // was never set, so sessions were never recorded
   startSecondTimer();
 
   if (startingOnQuiz) {
@@ -3184,21 +3126,25 @@ async function initUserDoc(user) {
 }
 
 // ── Preference sync ───────────────────────────────────────────────────────────
+let _prefTimer = null;
 function savePreferences() {
   if (!fbUser) return;
-  _cfSavePreferences({
-    theme: localStorage.getItem('vocab_theme') || 'dark',
-    mode: mode,
-    dir: dir,
-    lastLesson: selectedLesson
-  }).catch(() => {});
+  clearTimeout(_prefTimer);
+  _prefTimer = setTimeout(() => { // debounced: mode/lesson/theme changes often come in bursts
+    _cfSavePreferences({
+      theme: localStorage.getItem('vocab_theme') || 'dark',
+      mode: mode,
+      dir: dir,
+      lastLesson: selectedLesson
+    }).catch(() => {});
+  }, 800);
 }
 
 function applyPreferences(prefs) {
   if (!prefs || Object.keys(prefs).length === 0) return;
 
   // Theme — setTheme is safe to call; savePreferences guard handles fbUser
-  if (prefs.theme) setTheme(prefs.theme);
+  if (prefs.theme) setTheme(prefs.theme, true); // silent: don't echo loaded prefs back to the server
 
   const savedMode   = prefs.mode     || 'adaptive';
   const savedDir    = prefs.dir      || 'word';
@@ -3248,30 +3194,6 @@ function applyPreferences(prefs) {
   startSession();
 }
 
-// Parses "HH:MM:SS" back to total seconds for local tracking.
-function parseHMS(str) {
-  if (!str || typeof str !== "string") return 0;
-  const [h,m,s] = str.split(":").map(Number);
-  return (h||0)*3600 + (m||0)*60 + (s||0);
-}
-
-// syncFromFirestore — previously did a direct Firestore read every 60s for multi-device sync.
-// Removed: direct client reads are blocked by Firestore rules (all reads go through Cloud Functions).
-// initUserDoc loads all data at session start; flushUserData returns authoritative userSeconds.
-async function syncFromFirestore() {
-  return;
-}
-
-// Manual sync triggered by refresh buttons — shows brief spinning state.
-async function manualSync(btn) {
-  if (!fbUser) return;
-  if (btn) btn.classList.add('spinning');
-  await syncFromFirestore();
-  if (btn) {
-    setTimeout(() => btn.classList.remove('spinning'), 700);
-  }
-}
-
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
 // flushTimer and syncTimer are merged into one interval to halve the number of
 // concurrent Firestore round-trips. syncGlobalStats (a read+write) runs only every
@@ -3294,12 +3216,10 @@ function startSecondTimer() {
     }
   }, 1000);
   // Single interval handles flushing, syncing from Firestore, and periodic global stat sync.
-  // syncFromFirestore piggybacks here — no separate syncTimer needed.
   // syncGlobalStats does a read+write just to format a number, so it runs every 5 min (every
   // 5th flush) rather than every minute. totalSeconds accuracy is unaffected.
   flushTimer = setInterval(async () => {
     await flushTime();
-    syncFromFirestore();
     flushCount++;
     if (flushCount % 5 === 0) syncGlobalStats();
   }, 60000);
@@ -3313,19 +3233,18 @@ function stopTimers() {
   flushTimer = null;
 }
 
-function flushTime() {
+function flushTime(final) {
   if (!fbUser) return Promise.resolve();
   const elapsed = localUserSeconds - lastFlushUserSeconds;
   lastFlushUserSeconds = localUserSeconds;
-  const fmt = fmtHMS(localUserSeconds);
 
   const answersToFlush = pendingAnswers;
   const correctToFlush = pendingCorrect;
   pendingAnswers = 0;
   pendingCorrect = 0;
 
-  // Nothing to write — skip the Cloud Function call entirely.
-  if (elapsed === 0 && Object.keys(wordStats).length === 0 && answersToFlush === 0) {
+  // Nothing new (idle/AFK, or hide+unload firing together) — skip the Cloud Function call.
+  if (elapsed <= 0 && answersToFlush === 0) {
     return Promise.resolve();
   }
 
@@ -3334,7 +3253,7 @@ function flushTime() {
     activityDays,
     answersToFlush,
     correctToFlush
-  }).then(res => {
+  }, final).then(res => {
     // Sync authoritative userSeconds back from server
     if (res && res.data && typeof res.data.userSeconds === 'number') {
       localUserSeconds     = res.data.userSeconds;
@@ -3394,7 +3313,7 @@ function onUserActivity() {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     stopTimers();
-    flushTime();
+    flushTime(true);
     endSession();
   } else {
     // Returning to the tab counts as activity — don't penalise time spent in another tab.
@@ -3404,7 +3323,7 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("beforeunload", () => {
   stopTimers();
-  flushTime();
+  flushTime(true);
   endSession();
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3539,10 +3458,10 @@ async function loadQuizList() {
       return;
     }
     container.innerHTML = quizzes.map(q => `
-      <div class="quiz-card" onclick="navigate('quiz-${q.id}')">
+      <div class="quiz-card" data-id="${esc(q.id)}" onclick="navigate('quiz-'+this.dataset.id)">
         <div class="quiz-card-info">
-          <div class="quiz-card-title">${q.title}</div>
-          <div class="quiz-card-meta">${q.wordCount} words${q.submittedBy ? ` · Submitted by ${q.submittedBy}` : ''}</div>
+          <div class="quiz-card-title">${esc(q.title)}</div>
+          <div class="quiz-card-meta">${esc(q.wordCount)} words${q.submittedBy ? ` · Submitted by ${esc(q.submittedBy)}` : ''}</div>
         </div>
         <div class="quiz-card-arrow">›</div>
       </div>
@@ -3567,16 +3486,16 @@ async function loadMySubmissions() {
       const date = s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : '';
       const notesPreview = s.notes ? s.notes.slice(0, 60) + (s.notes.length > 60 ? '…' : '') : '(no notes)';
       const deleteBtn = s.status === 'pending'
-        ? `<button class="submission-delete-btn" onclick="deleteSubmission('${s.id}', this)">Delete</button>`
+        ? `<button class="submission-delete-btn" data-id="${esc(s.id)}" onclick="deleteSubmission(this.dataset.id, this)">Delete</button>`
         : '';
       return `
-        <div class="submission-card" id="submission-${s.id}">
+        <div class="submission-card" id="submission-${esc(s.id)}">
           <div class="submission-info">
-            <div class="submission-notes">${notesPreview}</div>
-            <div>${s.imageCount} image${s.imageCount !== 1 ? 's' : ''} · ${date}</div>
+            <div class="submission-notes">${esc(notesPreview)}</div>
+            <div>${esc(s.imageCount)} image${s.imageCount !== 1 ? 's' : ''} · ${date}</div>
           </div>
           ${deleteBtn}
-          <span class="status-badge ${s.status}">${s.status}</span>
+          <span class="status-badge ${esc(s.status)}">${esc(s.status)}</span>
         </div>
       `;
     }).join('');
@@ -3608,7 +3527,8 @@ async function deleteSubmission(id, btn) {
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE    = MAX_FILE_SIZE_MB * 1024 * 1024;
 let _selectedFiles     = [];
-let _uploadZoneInited  = false;
+let _uploadZoneInited = false;
+let _previewUrls = [];
 
 function initUploadZoneIfNeeded() {
   if (_uploadZoneInited) return;
@@ -3673,9 +3593,11 @@ function renderPreviews() {
   label.textContent = _selectedFiles.length === 0
     ? `Click or drag images here (max ${MAX_FILE_SIZE_MB}MB each)`
     : `${_selectedFiles.length}/10 image${_selectedFiles.length !== 1 ? 's' : ''} selected`;
+  _previewUrls.forEach(u => URL.revokeObjectURL(u)); _previewUrls = [];
   container.innerHTML = '';
   _selectedFiles.forEach((file, i) => {
     const url  = URL.createObjectURL(file);
+    _previewUrls.push(url);
     const wrap = document.createElement('div');
     wrap.className = 'upload-thumb-wrap';
     wrap.innerHTML = `
@@ -3719,6 +3641,8 @@ async function submitQuizForm() {
   statusEl.style.color = 'var(--muted)';
 
   try {
+    statusEl.textContent = 'Preparing upload…';
+    await _loadStorageSdk();
     // Upload images one at a time with progress counter
     const uid       = fbUser.uid;
     const timestamp = Date.now();
@@ -3726,7 +3650,7 @@ async function submitQuizForm() {
     for (let i = 0; i < _selectedFiles.length; i++) {
       statusEl.textContent = `Uploading image ${i + 1} of ${_selectedFiles.length}…`;
       const file = _selectedFiles[i];
-      const path = `submissions/${uid}/${timestamp}/${i}_${file.name}`;
+      const path = `submissions/${uid}/${timestamp}/${i}_${file.name.replace(/[^\w.\-]+/g,'_')}`;
       const ref  = firebase.storage().ref(path);
       await ref.put(file);
       imagePaths.push(path);
@@ -3761,7 +3685,7 @@ const _uiFns = {
   openHeatmap, closeHeatmap, toggleSettings, selectLesson, drillSelected,
   hideSelected, restoreSelected, clearSelection, saveHidden, toggleWordSelect,
   retakeWrong, showAnswer, flipCard, flashNav, flashAssess, toggleFlashShuffle,
-  manualSync, jumpToLesson, smoothScrollOverlay,
+  jumpToLesson, smoothScrollOverlay,
   navigate, closeLeaveModal, confirmLeave, removeFile, submitQuizForm, loadQuizAndStart, toggleNameField, resetSubmitForm, deleteSubmission
 };
 Object.assign(window, _uiFns);
