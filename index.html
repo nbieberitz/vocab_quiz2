@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://us-central1-vocab-tool-testing.cloudfunctions.net" crossorigin>
+<link rel="preconnect" href="https://us-central1-vocabulary-study-tool.cloudfunctions.net" crossorigin>
 <title>Vocab Quiz</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
@@ -1545,7 +1545,7 @@ kbd{
 
     <label class="form-label">Images (up to 10)</label>
     <div class="upload-zone" id="upload-zone">
-      <input type="file" id="image-input" accept="image/*" multiple>
+      <input type="file" id="image-input" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple>
       <div class="upload-zone-label" id="upload-zone-label">Click or drag images here</div>
       <div class="upload-previews" id="upload-previews"></div>
     </div>
@@ -1578,7 +1578,7 @@ kbd{
       <span class="logo-eyebrow">English Final · Vocabulary</span>
       <div class="logo">VOCABULARY <em>QUIZ</em></div>
       <span class="logo-sub">150 words &nbsp;·&nbsp; 15 lessons</span>
-      <span class="version-tag">v3.1.4</span>
+      <span class="version-tag">v3.2.0</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -2090,7 +2090,6 @@ let sessionCorrectAnswers = 0;
 // trackAnswer() accumulates into these; flushTime() drains them in a single write.
 let pendingAnswers = 0;
 let pendingCorrect = 0;
-let flushCount = 0; // increments each flush; syncGlobalStats runs every 5th flush (5 min)
 let _prefetchPromise = null; // holds in-flight getQuestion call for instant next-question render
 let _readyQuestion   = null; // first question pre-loaded before UI shows — renders with no spinner
 let _initializing    = true; // true until auth + questions are ready; blocks loadNextQuestion
@@ -2831,14 +2830,35 @@ function closeGlossary(){
 }
 
 // ─── Firebase Tracking ───────────────────────────────────────────────────────
+// Settings for the official project, "vocabulary-study-tool".
+// The three PASTE_ values come from the Firebase console:
+//   gear icon → Project settings → General → Your apps → (the web app) → SDK setup and configuration → Config.
+// You can paste over this whole block with the one the console shows, or fill in just the three values.
 const firebaseConfig = {
-  apiKey: "AIzaSyC8Uo4lppy5RojXCXG-KIj30OHcrXcEpkI",
-  authDomain: "vocab-tool-testing.firebaseapp.com",
-  projectId: "vocab-tool-testing",
-  storageBucket: "vocab-tool-testing.firebasestorage.app",
-  messagingSenderId: "604425746281",
-  appId: "1:604425746281:web:6fa5ff08327002bbfaeff8"
+  apiKey: "PASTE_API_KEY",
+  authDomain: "vocabulary-study-tool.firebaseapp.com",
+  projectId: "vocabulary-study-tool",
+  storageBucket: "PASTE_STORAGE_BUCKET",
+  messagingSenderId: "913103862395",
+  appId: "PASTE_APP_ID"
 };
+// Stop early, with a readable message, if the settings are unfinished or come from different projects.
+(function checkFirebaseConfig(){
+  const c = firebaseConfig, problems = [];
+  if (Object.values(c).some(v => /^PASTE_/.test(String(v)))) {
+    problems.push('some values still say PASTE_');
+  } else {
+    if (c.authDomain !== c.projectId + '.firebaseapp.com')              problems.push('authDomain does not match projectId');
+    if (!String(c.storageBucket).startsWith(c.projectId + '.'))         problems.push('storageBucket does not match projectId');
+    if (String(c.appId).split(':')[1] !== String(c.messagingSenderId))  problems.push('appId does not match messagingSenderId');
+  }
+  if (!problems.length) return;
+  console.error('firebaseConfig problem: ' + problems.join('; '));
+  document.body.innerHTML = '<div style="max-width:34rem;margin:15vh auto;padding:1.25rem;border-radius:8px;background:#fff;color:#111;font:16px/1.5 system-ui,sans-serif">' +
+    '<strong>This copy of the quiz is not set up yet.</strong><br>Open <code>index.html</code>, find <code>firebaseConfig</code>, and paste in the web-app settings for the ' +
+    '<code>vocabulary-study-tool</code> Firebase project (steps are in DEPLOY.md).</div>';
+  throw new Error('firebaseConfig is not finished: ' + problems.join('; '));
+})();
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 // Storage SDK is only needed on the submit screen, so it loads on demand.
@@ -2988,7 +3008,7 @@ async function _callCF(name, data, keepalive) {
   const timer = ctrl ? setTimeout(() => ctrl.abort(), 20000) : null; // never leave the UI waiting forever
   try {
     const res = await fetch(
-      `https://us-central1-vocab-tool-testing.cloudfunctions.net/${name}`,
+      `https://us-central1-${firebaseConfig.projectId}.cloudfunctions.net/${name}`,
       {
         method: 'POST',
         headers: {
@@ -3014,7 +3034,6 @@ async function _callCF(name, data, keepalive) {
 
 const _cfInitUserDoc     = d => _callCF('initUserDoc', d);
 const _cfFlushUserData = (d, k) => _callCF('flushUserData', d, k);
-const _cfSyncGlobalStats = d => _callCF('syncGlobalStats', d);
 const _cfEndSession = d => _callCF('endSession', d, true);
 const _cfSavePreferences = d => _callCF('savePreferences', d);
 const _cfSaveHidden      = d => _callCF('saveHidden', d);
@@ -3202,9 +3221,6 @@ function applyPreferences(prefs) {
 }
 
 // Ticks every second locally. Flushes to Firestore every 60s and on tab hide/close.
-// flushTimer and syncTimer are merged into one interval to halve the number of
-// concurrent Firestore round-trips. syncGlobalStats (a read+write) runs only every
-// 5th flush (~5 min) instead of every minute.
 function startSecondTimer() {
   stopTimers();
   secondTimer = setInterval(() => {
@@ -3222,14 +3238,8 @@ function startSecondTimer() {
       localUserSeconds++;
     }
   }, 1000);
-  // Single interval handles flushing, syncing from Firestore, and periodic global stat sync.
-  // syncGlobalStats does a read+write just to format a number, so it runs every 5 min (every
-  // 5th flush) rather than every minute. totalSeconds accuracy is unaffected.
-  flushTimer = setInterval(async () => {
-    await flushTime();
-    flushCount++;
-    if (flushCount % 5 === 0) syncGlobalStats();
-  }, 60000);
+  // One interval sends the buffered time and answer counts to the server once a minute.
+  flushTimer = setInterval(() => { flushTime(); }, 60000);
 }
 
 function stopTimers() {
@@ -3255,8 +3265,9 @@ function flushTime(final) {
     return Promise.resolve();
   }
 
+  // wordStats is not sent: the server already records every answer in submitAnswer, and a large
+  // payload would not fit in the 64 KB limit for the request that fires while the tab is closing.
   return _cfFlushUserData({
-    wordStats,
     activityDays,
     answersToFlush,
     correctToFlush
@@ -3267,14 +3278,6 @@ function flushTime(final) {
       lastFlushUserSeconds = localUserSeconds;
     }
   }).catch(err => console.warn("flushUserData CF error:", err));
-}
-
-async function syncGlobalStats() {
-  try {
-    await _cfSyncGlobalStats();
-  } catch (err) {
-    console.warn("syncGlobalStats CF error:", err);
-  }
 }
 
 function trackAnswer(isRight) {
@@ -3533,6 +3536,22 @@ async function deleteSubmission(id, btn) {
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE    = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_TOTAL_MB     = 17;      // the server emails every image, and an email can only be so big
+const MAX_TOTAL_SIZE   = MAX_TOTAL_MB * 1024 * 1024;
+const MAX_IMAGES       = 10;
+// The only image types the server and the Storage rules accept (keep in step with functions/index.js and storage.rules).
+const IMAGE_MIME = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif', heic:'image/heic', heif:'image/heif' };
+const MIME_EXT   = { 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/gif':'gif', 'image/heic':'heic', 'image/heif':'heif' };
+const _has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+// Extension to upload a file under: from its name when that is an allowed one, otherwise from the browser's idea
+// of its type (some HEIC photos arrive with no type, some camera files with no extension). '' = not an allowed image.
+function _imageExt(file) {
+  const m = /\.([A-Za-z0-9]+)$/.exec(file.name || '');
+  const fromName = m ? m[1].toLowerCase() : '';
+  if (_has(IMAGE_MIME, fromName)) return fromName;
+  const type = (file.type || '').toLowerCase();
+  return _has(MIME_EXT, type) ? MIME_EXT[type] : '';
+}
 let _selectedFiles     = [];
 let _uploadZoneInited = false;
 let _previewUrls = [];
@@ -3575,16 +3594,27 @@ function resetSubmitForm() {
 
 function addFiles(files) {
   const statusEl = document.getElementById('submit-status');
-  const oversized = files.filter(f => f.size > MAX_FILE_SIZE);
-  if (oversized.length) {
-    statusEl.style.color = 'var(--wrong)';
-    statusEl.textContent = `${oversized.length} file(s) exceed ${MAX_FILE_SIZE_MB}MB and were skipped.`;
-  } else {
-    if (statusEl) statusEl.textContent = '';
+  const skipped  = { type: 0, size: 0, total: 0, count: 0 };
+  let total = _selectedFiles.reduce((n, f) => n + f.size, 0);
+  const picked = [];
+  for (const f of files) {
+    if (!_imageExt(f))                                       { skipped.type++;  continue; }
+    if (f.size > MAX_FILE_SIZE)                              { skipped.size++;  continue; }
+    if (_selectedFiles.length + picked.length >= MAX_IMAGES) { skipped.count++; continue; }
+    if (total + f.size > MAX_TOTAL_SIZE)                     { skipped.total++; continue; }
+    total += f.size;
+    picked.push(f);
   }
-  const valid     = files.filter(f => f.type.startsWith('image/') && f.size <= MAX_FILE_SIZE);
-  const remaining = 10 - _selectedFiles.length;
-  _selectedFiles  = [..._selectedFiles, ...valid.slice(0, remaining)];
+  _selectedFiles = [..._selectedFiles, ...picked];
+  const notes = [];
+  if (skipped.type)  notes.push(`${skipped.type} file(s) skipped: only JPG, PNG, WebP, GIF and HEIC images work.`);
+  if (skipped.size)  notes.push(`${skipped.size} file(s) skipped: over ${MAX_FILE_SIZE_MB}MB each.`);
+  if (skipped.total) notes.push(`${skipped.total} file(s) skipped: ${MAX_TOTAL_MB}MB total limit.`);
+  if (skipped.count) notes.push(`${skipped.count} file(s) skipped: up to ${MAX_IMAGES} images.`);
+  if (statusEl) {
+    statusEl.style.color = notes.length ? 'var(--wrong)' : 'var(--muted)';
+    statusEl.textContent = notes.join(' ');
+  }
   renderPreviews();
 }
 
@@ -3598,8 +3628,8 @@ function renderPreviews() {
   const label     = document.getElementById('upload-zone-label');
   if (!container || !label) return;
   label.textContent = _selectedFiles.length === 0
-    ? `Click or drag images here (max ${MAX_FILE_SIZE_MB}MB each)`
-    : `${_selectedFiles.length}/10 image${_selectedFiles.length !== 1 ? 's' : ''} selected`;
+    ? `Click or drag images here (max ${MAX_FILE_SIZE_MB}MB each, ${MAX_TOTAL_MB}MB total)`
+    : `${_selectedFiles.length}/${MAX_IMAGES} image${_selectedFiles.length !== 1 ? 's' : ''} selected`;
   _previewUrls.forEach(u => URL.revokeObjectURL(u)); _previewUrls = [];
   container.innerHTML = '';
   _selectedFiles.forEach((file, i) => {
@@ -3657,9 +3687,14 @@ async function submitQuizForm() {
     for (let i = 0; i < _selectedFiles.length; i++) {
       statusEl.textContent = `Uploading image ${i + 1} of ${_selectedFiles.length}…`;
       const file = _selectedFiles[i];
-      const path = `submissions/${uid}/${timestamp}/${i}_${file.name.replace(/[^\w.\-]+/g,'_')}`;
+      const ext  = _imageExt(file);
+      if (!ext) throw new Error('Not an allowed image type: ' + file.name);
+      // Only letters, digits, _ and - are kept from the file name; the folder, number and extension are set here.
+      const base = (file.name || 'image').replace(/\.[^.]*$/, '').replace(/[^\w\-]+/g, '_').slice(0, 60) || 'image';
+      const path = `submissions/${uid}/${timestamp}/${i}_${base}.${ext}`;
       const ref  = firebase.storage().ref(path);
-      await ref.put(file);
+      // Name the type outright: some files arrive with none, and Storage only accepts the image types above.
+      await ref.put(file, { contentType: _has(MIME_EXT, file.type) ? file.type : IMAGE_MIME[ext] });
       imagePaths.push(path);
     }
 
@@ -3674,7 +3709,9 @@ async function submitQuizForm() {
   } catch (err) {
     console.error("Submission error:", err);
     statusEl.style.color = 'var(--wrong)';
-    statusEl.textContent = 'Something went wrong — please try again.';
+    // Show the server's own words for problems a person can fix (too many submissions, files too big…).
+    const fixable = err && ['RESOURCE_EXHAUSTED', 'INVALID_ARGUMENT', 'NOT_FOUND'].includes(err.code);
+    statusEl.textContent = fixable && err.message ? err.message : 'Something went wrong — please try again.';
     btn.disabled = false;
   }
 }
