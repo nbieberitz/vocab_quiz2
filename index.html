@@ -2830,17 +2830,16 @@ function closeGlossary(){
 }
 
 // ─── Firebase Tracking ───────────────────────────────────────────────────────
-// Settings for the official project, "vocabulary-study-tool".
-// The three PASTE_ values come from the Firebase console:
+// Settings for the official project, "vocabulary-study-tool". They come from the Firebase console:
 //   gear icon → Project settings → General → Your apps → (the web app) → SDK setup and configuration → Config.
-// You can paste over this whole block with the one the console shows, or fill in just the three values.
+// They only tell the browser which project to talk to; they are not secrets. Security comes from the rules and the functions.
 const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
+  apiKey: "AIzaSyDadRa4vIG8aKeKSCm5wq5lCRm5G_c9N3U",
   authDomain: "vocabulary-study-tool.firebaseapp.com",
   projectId: "vocabulary-study-tool",
-  storageBucket: "PASTE_STORAGE_BUCKET",
+  storageBucket: "vocabulary-study-tool.firebasestorage.app",
   messagingSenderId: "913103862395",
-  appId: "PASTE_APP_ID"
+  appId: "1:913103862395:web:80676232783593673cc0de"
 };
 // Stop early, with a readable message, if the settings are unfinished or come from different projects.
 (function checkFirebaseConfig(){
